@@ -3,7 +3,6 @@ import './style.css';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://natsumi-site.kro.kr';
 
 const state = {
-  user: null,
   servers: [],
   selectedGuild: null,
   commands: [],
@@ -12,33 +11,33 @@ const state = {
 const app = document.getElementById('app');
 
 const defaultCommands = [
-  { name: '도움말', description: '나츠미 명령어와 안내를 보여줘요.', enabled: true, heart: false },
-  { name: '티켓', description: '문의 티켓 패널과 목록을 관리해요.', enabled: true, heart: false },
-  { name: '공지', description: '서버 공지를 예쁘게 전송해요.', enabled: true, heart: false },
-  { name: '환영인사', description: '새 멤버 환영 메시지를 설정해요.', enabled: true, heart: false },
-  { name: 'SFW', description: '안전한 애니 이미지를 불러와요.', enabled: true, heart: true },
-  { name: '애니짤', description: '애니 짤방 이미지를 불러와요.', enabled: true, heart: true },
-  { name: 'NSFW', description: 'NSFW 전용 채널에서만 사용해요.', enabled: true, heart: true },
-  { name: 'NSFW2', description: '추가 NSFW 이미지 명령어예요.', enabled: true, heart: true },
+  { name: '도움말', description: '나츠미 명령어와 사용법을 보여줘요.', enabled: true, heart: false },
+  { name: '티켓', description: '문의 티켓 패널과 로그 채널을 관리해요.', enabled: true, heart: false },
+  { name: '공지', description: '서버 공지를 깔끔하게 전송해요.', enabled: true, heart: false },
+  { name: '환영인사', description: '새 멤버에게 보낼 환영 메시지를 설정해요.', enabled: true, heart: false },
+  { name: 'sfw', description: '안전한 애니 이미지를 불러와요.', enabled: true, heart: true },
+  { name: '애니짤', description: '애니 짤 이미지를 불러와요.', enabled: true, heart: true },
+  { name: 'nsfw', description: 'NSFW 전용 채널에서만 사용할 수 있어요.', enabled: true, heart: true },
+  { name: 'rank', description: '서버 레벨 랭킹 카드를 보여줘요.', enabled: true, heart: false },
 ];
 
 function viewIntro() {
   app.innerHTML = `
     <div class="hero-shell">
       <nav class="topbar glass">
-        <div class="brand"><span>🦊</span><b>NATSUMI</b></div>
+        <div class="brand"><span>🌸</span><b>NATSUMI</b></div>
         <button class="ghost-btn" data-action="login">Discord 로그인</button>
       </nav>
 
       <section class="hero glass">
         <p class="eyebrow">AI Discord Bot Dashboard</p>
-        <h1>나츠미 서버 관리를<br/>더 귀엽고 쉽게.</h1>
+        <h1>나츠미 서버 관리를<br/>더 가볍고 예쁘게.</h1>
         <p class="hero-desc">
-          티켓, 공지, 환영인사, 명령어 ON/OFF를 웹에서 관리해요.
-          관리자 권한이 있는 서버만 표시되니까 안심해도 돼. 흥, 내가 다 챙긴 거야 😤
+          티켓, 공지, 환영인사, 명령어 ON/OFF를 한 곳에서 관리해요.
+          관리자 권한이 있는 서버만 보여주고, 프리미엄 하트가 필요한 기능도 따로 표시해요.
         </p>
         <div class="hero-actions">
-          <button class="primary-btn" data-action="login">바로가기</button>
+          <button class="primary-btn" data-action="login">Discord로 시작</button>
           <button class="soft-btn" data-action="preview">미리보기</button>
         </div>
         <div class="hero-badges">
@@ -54,7 +53,7 @@ function viewDashboard() {
     <div class="dashboard-shell">
       <aside class="sidebar glass">
         <div class="profile-mini">
-          <div class="avatar">🦊</div>
+          <div class="avatar">🌸</div>
           <div><b>나츠미</b><small>Dashboard</small></div>
         </div>
         <button class="nav active" data-tab="servers">서버 목록</button>
@@ -83,16 +82,19 @@ function renderServers() {
   const panel = document.getElementById('panel');
   const servers = state.servers.length ? state.servers : [
     { id: 'demo-1', name: '나츠미 테스트 서버', icon: null, manageable: true },
-    { id: 'demo-2', name: '관리자 권한 서버만 표시 예시', icon: null, manageable: true },
+    { id: 'demo-2', name: '관리자 권한 서버 예시', icon: null, manageable: true },
   ];
 
   panel.innerHTML = `
-    <section class="section-title"><h3>서버 목록</h3><p>네가 들어가 있고, 관리자 권한이 있는 서버만 보여줄 거야.</p></section>
+    <section class="section-title">
+      <h3>서버 목록</h3>
+      <p>로그인 후에는 내가 들어가 있고 관리자 권한이 있는 서버만 표시돼요.</p>
+    </section>
     <div class="server-grid">
       ${servers.map((guild) => `
-        <button class="server-card" data-guild="${guild.id}">
-          <div class="server-icon">${guild.icon ? `<img src="${guild.icon}" />` : '🦊'}</div>
-          <div><b>${guild.name}</b><small>관리 가능</small></div>
+        <button class="server-card" data-guild="${guild.id}" data-name="${guild.name}">
+          <div class="server-icon">${guild.icon ? `<img src="${guild.icon}" alt="" />` : '🌸'}</div>
+          <div><b>${guild.name}</b><small>${guild.manageable === false ? '권한 없음' : '관리 가능'}</small></div>
         </button>
       `).join('')}
     </div>
@@ -103,12 +105,22 @@ function renderCommands() {
   const panel = document.getElementById('panel');
   const commands = state.commands.length ? state.commands : defaultCommands;
   panel.innerHTML = `
-    <section class="section-title"><h3>사용 가능한 명령어</h3><p>서버에서 쓸 명령어를 켜고 끌 수 있어. 하트 표시 명령어는 한디리 하트 인증 후 사용돼.</p></section>
+    <section class="section-title">
+      <h3>사용 가능한 명령어</h3>
+      <p>서버별로 명령어를 켜고 끌 수 있어요. 하트 표시 명령어는 한디리 프리미엄 하트 인증 후 사용할 수 있어요.</p>
+    </section>
     <div class="command-list">
       ${commands.map((cmd) => `
         <article class="command-card">
-          <div><h4>/${cmd.name}</h4><p>${cmd.description}</p>${cmd.heart ? '<span class="heart-chip">하트 필요</span>' : ''}</div>
-          <label class="switch"><input type="checkbox" ${cmd.enabled ? 'checked' : ''} data-command="${cmd.name}"><span></span></label>
+          <div>
+            <h4>/${cmd.name}</h4>
+            <p>${cmd.description}</p>
+            ${cmd.heart ? '<span class="heart-chip">프리미엄 하트 필요</span>' : ''}
+          </div>
+          <label class="switch" aria-label="/${cmd.name} 사용 여부">
+            <input type="checkbox" ${cmd.enabled ? 'checked' : ''} data-command="${cmd.name}">
+            <span></span>
+          </label>
         </article>
       `).join('')}
     </div>
@@ -117,9 +129,9 @@ function renderCommands() {
 
 function renderSimple(tab) {
   const map = {
-    welcome: ['👋 환영인사', '새 멤버가 들어왔을 때 보낼 메시지와 채널을 설정해요.'],
-    notice: ['📢 공지 시스템', '웹에서 공지 내용을 작성하고 지정 채널로 전송해요.'],
-    ticket: ['🎫 티켓 설정', '티켓 패널 채널, 로그 채널, 관리자 역할을 설정해요.'],
+    welcome: ['환영인사', '새 멤버가 들어왔을 때 보낼 메시지와 채널을 설정해요.'],
+    notice: ['공지 시스템', '대시보드에서 공지 내용을 작성하고 지정한 채널로 전송해요.'],
+    ticket: ['티켓 설정', '티켓 패널 채널, 로그 채널, 관리자 역할을 설정해요.'],
   };
   const [title, desc] = map[tab];
   document.getElementById('panel').innerHTML = `
@@ -135,7 +147,7 @@ function renderSimple(tab) {
 async function loadServers() {
   try {
     const res = await fetch(`${API_BASE}/api/dashboard/guilds`, { credentials: 'include' });
-    if (!res.ok) throw new Error('서버 목록 API 대기 중');
+    if (!res.ok) throw new Error('Failed to load guilds');
     const data = await res.json();
     state.servers = data.guilds || [];
   } catch {
@@ -163,7 +175,7 @@ app.addEventListener('click', async (event) => {
     return;
   }
   if (target.dataset.guild) {
-    state.selectedGuild = { id: target.dataset.guild, name: target.innerText.trim().split('\n')[0] };
+    state.selectedGuild = { id: target.dataset.guild, name: target.dataset.name };
     viewDashboard();
     renderCommands();
     return;
