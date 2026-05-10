@@ -11,7 +11,6 @@ const state = {
 const app = document.getElementById('app');
 
 const defaultCommands = [
-  { name: '도움말', description: '나츠미 명령어와 사용법을 보여줘요.', enabled: true, heart: false },
   { name: '티켓', description: '문의 티켓 패널과 로그 채널을 관리해요.', enabled: true, heart: false },
   { name: '공지', description: '서버 공지를 깔끔하게 전송해요.', enabled: true, heart: false },
   { name: '환영인사', description: '새 멤버에게 보낼 환영 메시지를 설정해요.', enabled: true, heart: false },
@@ -103,7 +102,12 @@ function renderServers() {
 
 function renderCommands() {
   const panel = document.getElementById('panel');
-  const commands = state.commands.length ? state.commands : defaultCommands;
+  const commandsRaw = state.commands.length ? state.commands : defaultCommands;
+  const commands = commandsRaw.filter((cmd) => {
+    const raw = String(cmd?.name ?? '');
+    const lower = raw.toLowerCase();
+    return raw !== '도움말' && lower !== 'help';
+  });
   panel.innerHTML = `
     <section class="section-title">
       <h3>사용 가능한 명령어</h3>
