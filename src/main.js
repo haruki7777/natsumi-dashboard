@@ -59,7 +59,7 @@ const fallbackGuilds = [
 
 const defaultSettings = {
   disabledCommands: [],
-  features: { welcome: false, notice: true, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false },
+  features: { welcome: false, notice: true, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false },
   welcome: {
     enabled: false,
     channelId: '',
@@ -369,10 +369,12 @@ function renderQna() {
 }
 
 function featureName(key) {
+  if (key === 'level') return '레벨/랭크';
   return ({ welcome: '환영인사', notice: '공지', ticket: '문의', tts: 'TTS', ai: 'AI 채팅', shop: '웹상점', emojiUpscale: '이모지 업스케일' })[key] || key;
 }
 
 function featureDesc(key) {
+  if (key === 'level') return '대시보드에서 레벨 시스템을 켜고 랭크카드를 사용할 수 있게 해요.';
   return ({
     welcome: '입장/퇴장 카드와 환영 메시지를 관리해요.',
     notice: '대시보드 공지 전송을 허용해요.',
