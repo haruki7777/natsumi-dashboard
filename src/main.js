@@ -1,6 +1,6 @@
 import './style.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://natsumi-site.kro.kr';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://natsumi-game.kro.kr';
 const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || 'https://haruki7777.github.io/natsumi-dashboard/';
 const themeKey = 'natsumi-dashboard-theme';
 const selectedGuildKey = 'natsumi-dashboard-selected-guild';
@@ -59,7 +59,7 @@ const fallbackGuilds = [
 
 const defaultSettings = {
   disabledCommands: [],
-  features: { welcome: false, notice: true, ticket: true, tts: false, ai: true, shop: true },
+  features: { welcome: false, notice: true, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false },
   welcome: {
     enabled: false,
     channelId: '',
@@ -71,6 +71,7 @@ const defaultSettings = {
   },
   notice: { enabled: true, channelId: '', message: '' },
   tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'ko_warm_female' },
+  emojiUpscale: { enabled: false, channelId: '', webhookName: 'Natsumi Emoji Upscaler' },
 };
 
 const state = {
@@ -195,6 +196,8 @@ function dashboard() {
           ['notice', '공지 보내기'],
           ['commands', '명령어 켜고 끄기'],
           ['tts', 'TTS 관리'],
+          ['emoji', '이모지 업스케일'],
+          ['qna', '질문답변'],
         ].map(([tab, label]) => `<button class="nav ${state.activeTab === tab ? 'active' : ''}" data-tab="${tab}" type="button">${label}</button>`).join('')}
       </aside>
       <main class="main glass">
@@ -217,6 +220,8 @@ function renderPanel() {
   if (state.activeTab === 'notice') return renderNotice();
   if (state.activeTab === 'commands') return renderCommands();
   if (state.activeTab === 'tts') return renderTts();
+  if (state.activeTab === 'emoji') return renderEmoji();
+  if (state.activeTab === 'qna') return renderQna();
   return renderOverview();
 }
 
@@ -336,8 +341,35 @@ function renderTts() {
   `;
 }
 
+function renderEmoji() {
+  const emoji = state.settings.emojiUpscale || defaultSettings.emojiUpscale;
+  return `
+    <section class="section-title"><h3>이모지 업스케일</h3><p>기본은 항상 꺼짐이에요. 관리자가 켠 채널에서만 이미지/이모지 확대 웹훅이 반응하고, 임시 웹훅은 처리 후 정리하도록 봇 설정에 저장해요.</p></section>
+    <div class="form-grid">
+      <label class="check-line"><input type="checkbox" id="emojiEnabled" ${emoji.enabled ? 'checked' : ''}> 이모지 업스케일 켜기</label>
+      <label>반응 채널<select id="emojiChannel">${optionList('text', emoji.channelId)}</select></label>
+      <label>웹훅 표시 이름<input id="emojiWebhookName" value="${esc(emoji.webhookName || 'Natsumi Emoji Upscaler')}" /></label>
+    </div>
+    <div class="form-actions"><button class="primary-btn" data-action="save-emoji" type="button">이모지 설정 저장</button></div>
+  `;
+}
+
+function renderQna() {
+  return `
+    <section class="section-title"><h3>질문답변</h3><p>사용자는 질문을 남기고, 개발자는 답변을 달 수 있어요. 공지처럼 패널 형태로 보이게 백엔드에 저장돼요.</p></section>
+    <div class="form-grid">
+      <label>질문 작성<textarea id="questionText" placeholder="궁금한 내용을 적어줘."></textarea></label>
+    </div>
+    <div class="form-actions">
+      <button class="soft-btn" data-action="load-qna" type="button">질문 목록 불러오기</button>
+      <button class="primary-btn" data-action="send-question" type="button">질문 보내기</button>
+    </div>
+    <div id="qnaList" class="command-list"></div>
+  `;
+}
+
 function featureName(key) {
-  return ({ welcome: '환영인사', notice: '공지', ticket: '문의', tts: 'TTS', ai: 'AI 채팅', shop: '웹상점' })[key] || key;
+  return ({ welcome: '환영인사', notice: '공지', ticket: '문의', tts: 'TTS', ai: 'AI 채팅', shop: '웹상점', emojiUpscale: '이모지 업스케일' })[key] || key;
 }
 
 function featureDesc(key) {
@@ -348,6 +380,7 @@ function featureDesc(key) {
     tts: '전용 채팅방에 쓴 글을 음성 채널에서 읽어요.',
     ai: 'AI 채팅과 그림공방을 허용해요.',
     shop: '웹상점과 후원 보상을 허용해요.',
+    emojiUpscale: '설정한 채널에서만 이미지/이모지 업스케일 반응을 허용해요.',
   })[key] || '서버 기능을 켜거나 꺼요.';
 }
 
@@ -389,6 +422,14 @@ function collectSettingsFromDom(scope) {
       textChannelId: formValue('#ttsText'),
       voiceChannelId: formValue('#ttsVoiceChannel'),
       voice: formValue('#ttsVoice'),
+    };
+  }
+  if (scope === 'emoji') {
+    next.features.emojiUpscale = document.querySelector('#emojiEnabled')?.checked || false;
+    next.emojiUpscale = {
+      enabled: next.features.emojiUpscale,
+      channelId: formValue('#emojiChannel'),
+      webhookName: formValue('#emojiWebhookName') || 'Natsumi Emoji Upscaler',
     };
   }
   state.settings = next;
@@ -470,6 +511,39 @@ async function sendNotice() {
   }
 }
 
+async function sendQuestion() {
+  const question = formValue('#questionText');
+  if (!question) return toast('질문 내용을 먼저 적어줘.');
+  try {
+    await api(`/api/dashboard/guilds/${currentGuild().id}/questions`, { method: 'POST', body: JSON.stringify({ question }) });
+    document.querySelector('#questionText').value = '';
+    toast('질문을 보냈어.');
+    await loadQuestions();
+  } catch {
+    toast('질문 API가 아직 준비되지 않았거나 로그인이 필요해.');
+  }
+}
+
+async function loadQuestions() {
+  const list = document.querySelector('#qnaList');
+  if (!list) return;
+  try {
+    const data = await api(`/api/dashboard/guilds/${currentGuild().id}/questions`);
+    const rows = data.questions || [];
+    list.innerHTML = rows.map((row) => `
+      <article class="command-card">
+        <div>
+          <h4>${esc(row.username || row.userId || '질문자')}</h4>
+          <p>${esc(row.question)}</p>
+          ${row.answer ? `<span class="heart-chip">답변: ${esc(row.answer)}</span>` : '<span class="heart-chip">답변 대기</span>'}
+        </div>
+      </article>
+    `).join('') || '<p class="empty">아직 질문이 없어.</p>';
+  } catch {
+    list.innerHTML = '<p class="empty">질문 목록을 불러오지 못했어.</p>';
+  }
+}
+
 function toast(message) {
   state.notice = message;
   const old = document.querySelector('.toast');
@@ -537,6 +611,9 @@ app.addEventListener('click', async (event) => {
   if (target.dataset.action === 'send-notice') return sendNotice();
   if (target.dataset.action === 'save-commands') return saveSettings('commands');
   if (target.dataset.action === 'save-tts') return saveSettings('tts');
+  if (target.dataset.action === 'save-emoji') return saveSettings('emoji');
+  if (target.dataset.action === 'send-question') return sendQuestion();
+  if (target.dataset.action === 'load-qna') return loadQuestions();
 });
 
 app.addEventListener('change', async (event) => {

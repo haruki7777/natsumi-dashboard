@@ -1,6 +1,6 @@
 *{box-sizing:border-box}
-:root{color-scheme:dark;--bg:#101018;--text:#fff8fb;--muted:#e8d5e0;--panel:rgba(19,18,28,.78);--line:rgba(255,255,255,.16);--soft:rgba(255,255,255,.1);--pink:#ff4fa3;--orange:#ff9b43;--deep:#211423;font-family:Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
-:root[data-theme="light"]{color-scheme:light;--bg:#fff6f0;--text:#27131c;--muted:#6d4553;--panel:rgba(255,255,255,.86);--line:rgba(179,79,117,.24);--soft:rgba(255,115,170,.13);--deep:#fffaf6}
+:root{color-scheme:dark;--bg:#101018;--text:#fff8fb;--muted:#e8d5e0;--panel:rgba(24,17,20,.8);--line:rgba(255,181,112,.2);--soft:rgba(255,155,67,.12);--pink:#ff4fa3;--orange:#ff9b43;--deep:#211423;font-family:Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+:root[data-theme="light"]{color-scheme:light;--bg:#fff3f8;--text:#2c1321;--muted:#77435d;--panel:rgba(255,255,255,.9);--line:rgba(230,76,145,.24);--soft:rgba(255,79,163,.13);--pink:#f23390;--orange:#ff9f58;--deep:#fff8fb}
 body{margin:0;min-width:320px;color:var(--text);background:var(--bg);background-image:linear-gradient(120deg,rgba(11,9,18,.72),rgba(219,39,119,.18),rgba(255,155,67,.22)),url('/natsumi-dashboard/IMG_9380.png');background-position:center;background-size:cover;background-attachment:fixed;background-repeat:no-repeat}
 :root[data-theme="light"] body{background-image:linear-gradient(120deg,rgba(255,246,240,.82),rgba(255,119,174,.22),rgba(255,155,67,.2)),url('/natsumi-dashboard/IMG_9380.png')}
 button,input,textarea,select{font:inherit}button,select{cursor:pointer}a{color:inherit;text-decoration:none}
