@@ -1,7 +1,7 @@
 import './style.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://natsumi-game.kro.kr:25772';
-const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || 'http://natsumidashboard.kro.kr/';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.natsumi-game.kro.kr';
+const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || 'https://natsumidashboard.kro.kr/';
 const NATSUMI_PROFILE_IMAGE = '/natsumi-profile-03.jpg';
 const themeKey = 'natsumi-dashboard-theme';
 const selectedGuildKey = 'natsumi-dashboard-selected-guild';
