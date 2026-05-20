@@ -275,7 +275,7 @@ function renderOverview() {
     <section class="section-title"><h3>한눈에 보기</h3><p>공지, API 연결, 봇 서버 상태를 한 화면에서 확인해요.</p></section>
     <div class="stat-row">
       <article><span>API</span><b>${status.apiOk === false ? '주의' : '정상'}</b></article>
-      <article><span>나츠미가 지키는 서버</span><b>${status.guildCount ?? guild.botGuildCount ?? state.guilds.length}</b></article>
+      <article><span>나츠미가 지키는 서버</span><b>${status.guildCount ?? '확인 중'}</b></article>
       <article><span>관리 가능한 서버</span><b>${state.guilds.length}</b></article>
       <article><span>채널</span><b>${channels().length}</b></article>
       <article><span>꺼진 명령어</span><b>${state.settings.disabledCommands?.length || 0}</b></article>
