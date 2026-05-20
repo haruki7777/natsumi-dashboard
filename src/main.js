@@ -1,7 +1,7 @@
 import './style.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://natsumi-game.kro.kr';
-const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || 'https://haruki7777.github.io/natsumi-dashboard/';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://natsumi-game.kro.kr:25772';
+const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || 'https://natsumidashboard.kro.kr/';
 const themeKey = 'natsumi-dashboard-theme';
 const selectedGuildKey = 'natsumi-dashboard-selected-guild';
 
@@ -559,7 +559,7 @@ function toast(message) {
 
 function login() {
   const returnTo = encodeURIComponent(window.location.href);
-  window.location.href = `${API_BASE}/api/auth/discord?returnTo=${returnTo}`;
+  window.location.href = `${API_BASE}/auth/discord?returnTo=${returnTo}`;
 }
 
 app.addEventListener('click', async (event) => {
