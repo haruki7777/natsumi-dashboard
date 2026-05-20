@@ -254,9 +254,9 @@ async function finishDiscordAuth(req, res, redirectUri) {
   return res.redirect(returnTo);
 }
 
-app.get('/auth/discord', (req, res) => startDiscordAuth(req, res, DASHBOARD_URL, `${publicBaseUrl(req)}/auth/discord/callback`));
+app.get('/auth/discord', (req, res) => startDiscordAuth(req, res, `${publicBaseUrl(req)}/`, `${publicBaseUrl(req)}/auth/discord/callback`));
 app.get('/auth/discord/callback', (req, res) => finishDiscordAuth(req, res, `${publicBaseUrl(req)}/auth/discord/callback`));
-app.get('/auth/discord/dashboard', (req, res) => startDiscordAuth(req, res, DASHBOARD_URL, `${publicBaseUrl(req)}/auth/discord/dashboard/callback`));
+app.get('/auth/discord/dashboard', (req, res) => startDiscordAuth(req, res, `${publicBaseUrl(req)}/`, `${publicBaseUrl(req)}/auth/discord/dashboard/callback`));
 app.get('/auth/discord/dashboard/callback', (req, res) => finishDiscordAuth(req, res, `${publicBaseUrl(req)}/auth/discord/dashboard/callback`));
 app.post('/auth/logout', (req, res) => req.session.destroy(() => res.json({ ok: true })));
 

@@ -1,7 +1,8 @@
 import './style.css';
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || window.location.origin).replace(/\/$/, '');
-const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || 'https://natsumidashboard.kro.kr/';
+const DASHBOARD_SERVER_URL = 'http://45.13.236.245:25901';
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || (location.hostname === 'localhost' ? window.location.origin : DASHBOARD_SERVER_URL)).replace(/\/$/, '');
+const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || `${API_BASE}/`;
 const NATSUMI_PROFILE_IMAGE = '/natsumi-profile-03.jpg';
 const themeKey = 'natsumi-dashboard-theme';
 const selectedGuildKey = 'natsumi-dashboard-selected-guild';
