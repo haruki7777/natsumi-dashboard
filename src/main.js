@@ -619,8 +619,7 @@ function toast(message) {
 }
 
 function login() {
-  const returnTo = encodeURIComponent(DASHBOARD_URL);
-  window.location.href = `${API_BASE}/auth/discord?returnTo=${returnTo}`;
+  window.location.href = `${API_BASE}/auth/discord/dashboard`;
 }
 
 app.addEventListener('click', async (event) => {
