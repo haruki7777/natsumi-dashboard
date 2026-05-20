@@ -21,6 +21,7 @@ const DEVELOPER_NOTICE_CHANNEL_ID = process.env.DEVELOPER_NOTICE_CHANNEL_ID || '
 const DISCORD_ADMINISTRATOR = 0x8n;
 const DISCORD_MANAGE_GUILD = 0x20n;
 const distDir = path.join(__dirname, 'dist');
+mongoose.set('bufferCommands', false);
 
 const DashboardSettings = model('DashboardSettings', new Schema({
   guildId: { type: String, required: true, unique: true, index: true },
@@ -378,11 +379,26 @@ app.get('*', (_req, res) => {
   res.sendFile(path.join(distDir, 'index.html'));
 });
 
-mongoose.connect(process.env.MONGO_URI || process.env.MONGOOSE || '').then(() => {
+const mongoUri = process.env.MONGO_URI || process.env.MONGOOSE || process.env.MONGODB_URI || '';
+
+async function startServer() {
+  if (mongoUri) {
+    try {
+      await mongoose.connect(mongoUri);
+      console.log('MongoDB connected for Natsumi dashboard.');
+    } catch (error) {
+      console.warn(`MongoDB connection failed; dashboard will still serve login UI: ${error.message}`);
+    }
+  } else {
+    console.warn('MONGO_URI is missing; dashboard settings persistence is disabled until it is configured.');
+  }
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Natsumi dashboard listening on ${PORT}`);
   });
-}).catch((error) => {
-  console.error('MongoDB connection failed:', error.message);
+}
+
+startServer().catch((error) => {
+  console.error('Dashboard startup failed:', error);
   process.exit(1);
 });
