@@ -122,6 +122,11 @@ function isOwner(req) {
   return Boolean(OWNER_USER_ID && req.session?.discordUser?.id === OWNER_USER_ID);
 }
 
+function requireOwner(req, res, next) {
+  if (isOwner(req)) return next();
+  return res.status(403).json({ error: 'Developer only.' });
+}
+
 function isGuildAdmin(row) {
   try {
     const permissions = BigInt(row.permissions || 0);
@@ -260,6 +265,7 @@ app.get('/auth/discord/callback', (req, res) => finishDiscordAuth(req, res, `${p
 app.get('/auth/discord/dashboard', (req, res) => startDiscordAuth(req, res, `${publicBaseUrl(req)}/`, `${publicBaseUrl(req)}/auth/discord/dashboard/callback`));
 app.get('/auth/discord/dashboard/callback', (req, res) => finishDiscordAuth(req, res, `${publicBaseUrl(req)}/auth/discord/dashboard/callback`));
 app.post('/auth/logout', (req, res) => req.session.destroy(() => res.json({ ok: true })));
+app.get('/api/auth/me', (req, res) => res.json({ user: req.session?.discordUser || null, isOwner: isOwner(req) }));
 
 app.get('/api/dashboard/session', (req, res) => res.json({ user: req.session?.discordUser || null, isOwner: isOwner(req) }));
 app.get('/api/developer-announcements', async (_req, res) => {
@@ -272,8 +278,7 @@ app.get('/api/developer-announcements', async (_req, res) => {
     createdAt: row.createdAt,
   })) });
 });
-app.post('/api/developer-announcements', requireLogin, async (req, res) => {
-  if (!isOwner(req)) return res.status(403).json({ error: 'Only the developer can post announcements.' });
+app.post('/api/developer-announcements', requireLogin, requireOwner, async (req, res) => {
   const title = String(req.body?.title || '나츠미 지원서버 공지').trim().slice(0, 120);
   const message = String(req.body?.message || '').trim().slice(0, 1800);
   if (!message) return res.status(400).json({ error: '공지 내용이 비어 있어.' });
@@ -293,7 +298,7 @@ app.post('/api/developer-announcements', requireLogin, async (req, res) => {
   res.json({ ok: true, announcement: row, sent: sent.ok, error: sent.ok ? undefined : sent.error });
 });
 
-app.get('/api/dashboard/guilds', requireLogin, async (req, res) => {
+app.get('/api/dashboard/guilds', requireLogin, requireOwner, async (req, res) => {
   const manageable = (await fetchUserGuilds(req)).filter(isGuildAdmin);
   const guilds = await Promise.all(manageable.map(async (guild) => ({
     id: guild.id,
@@ -305,7 +310,7 @@ app.get('/api/dashboard/guilds', requireLogin, async (req, res) => {
   res.json({ guilds });
 });
 
-app.get('/api/dashboard/guilds/:guildId/settings', requireLogin, requireGuildAdmin, async (req, res) => {
+app.get('/api/dashboard/guilds/:guildId/settings', requireLogin, requireOwner, requireGuildAdmin, async (req, res) => {
   const settings = await DashboardSettings.findOneAndUpdate(
     { guildId: req.params.guildId },
     { $setOnInsert: { guildId: req.params.guildId } },
@@ -314,7 +319,7 @@ app.get('/api/dashboard/guilds/:guildId/settings', requireLogin, requireGuildAdm
   res.json({ settings });
 });
 
-app.patch('/api/dashboard/guilds/:guildId/settings', requireLogin, requireGuildAdmin, async (req, res) => {
+app.patch('/api/dashboard/guilds/:guildId/settings', requireLogin, requireOwner, requireGuildAdmin, async (req, res) => {
   const next = req.body?.settings || {};
   const settings = await DashboardSettings.findOneAndUpdate(
     { guildId: req.params.guildId },
@@ -324,7 +329,7 @@ app.patch('/api/dashboard/guilds/:guildId/settings', requireLogin, requireGuildA
   res.json({ ok: true, settings });
 });
 
-app.post('/api/dashboard/guilds/:guildId/notice', requireLogin, requireGuildAdmin, async (req, res) => {
+app.post('/api/dashboard/guilds/:guildId/notice', requireLogin, requireOwner, requireGuildAdmin, async (req, res) => {
   const message = String(req.body?.notice?.message || '').trim().slice(0, 1800);
   const channelId = String(req.body?.notice?.channelId || '').trim();
   if (!message) return res.status(400).json({ error: '공지 내용이 비어 있어.' });
@@ -341,12 +346,12 @@ app.post('/api/dashboard/guilds/:guildId/notice', requireLogin, requireGuildAdmi
   res.json({ ok: sent.ok, notice: row, messageId: sent.messageId, error: sent.error });
 });
 
-app.get('/api/dashboard/guilds/:guildId/questions', requireLogin, requireGuildAdmin, async (req, res) => {
+app.get('/api/dashboard/guilds/:guildId/questions', requireLogin, requireOwner, requireGuildAdmin, async (req, res) => {
   const rows = await DashboardQuestion.find({ guildId: req.params.guildId }).sort({ createdAt: -1 }).limit(50).lean();
   res.json({ questions: rows });
 });
 
-app.post('/api/dashboard/guilds/:guildId/questions', requireLogin, async (req, res) => {
+app.post('/api/dashboard/guilds/:guildId/questions', requireLogin, requireOwner, async (req, res) => {
   const question = String(req.body?.question || '').trim().slice(0, 1000);
   if (!question) return res.status(400).json({ error: '질문 내용이 비어 있어.' });
   const row = await DashboardQuestion.create({
@@ -358,8 +363,7 @@ app.post('/api/dashboard/guilds/:guildId/questions', requireLogin, async (req, r
   res.json({ ok: true, question: row });
 });
 
-app.post('/api/dashboard/guilds/:guildId/questions/:id/answer', requireLogin, async (req, res) => {
-  if (!isOwner(req)) return res.status(403).json({ error: '개발자만 답변할 수 있어.' });
+app.post('/api/dashboard/guilds/:guildId/questions/:id/answer', requireLogin, requireOwner, async (req, res) => {
   const answer = String(req.body?.answer || '').trim().slice(0, 1800);
   if (!answer) return res.status(400).json({ error: '답변 내용이 비어 있어.' });
   const row = await DashboardQuestion.findOneAndUpdate(

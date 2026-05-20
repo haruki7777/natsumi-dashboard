@@ -16,17 +16,17 @@ const welcomeVariables = [
 ];
 
 const sampleTemplates = [
-  ['포근한 첫인사', '{user.mention} 어서 와! {server.name}의 {member.count}번째 별이 되어줘서 고마워.'],
-  ['랭크카드 느낌', '환영해, {user.name}! 프로필 카드를 준비했어. {server.name}에서 천천히 둘러봐.'],
-  ['관리 서버용', '{user.mention} 님이 입장했어요. 규칙을 확인하고 즐거운 시간 보내주세요.'],
+  ['첫 인사', '{user.mention} 어서 와! {server.name}의 {member.count}번째 별이 되어줘서 고마워.'],
+  ['랭크 카드', '환영해, {user.name}! 프로필 카드를 준비했어. {server.name}에서 천천히 둘러봐.'],
+  ['관리 안내', '{user.mention} 님이 입장했어요. 규칙을 확인하고 즐거운 시간 보내주세요.'],
   ['친근한 말투', '{random.welcome} {user.name}! 기다리고 있었어.'],
-  ['AI 프롬프트용', '새 멤버 {user.name}에게 짧고 따뜻한 애니풍 환영 인사를 만들어줘.'],
-  ['게임센터풍', 'PRESS START, {user.name}! {server.name} 모험이 시작됐어.'],
+  ['AI 프롬프트', '새 멤버 {user.name}에게 짧고 따뜻한 나츠미식 환영 인사를 만들어줘.'],
+  ['게임센터', 'PRESS START, {user.name}! {server.name} 모험을 시작했어.'],
   ['차분한 안내', '{user.mention} 님, 환영합니다. 필요한 안내는 공지 채널에서 확인해주세요.'],
-  ['친구 초대풍', '{user.name} 왔다! 다들 반겨줘. 지금 멤버는 {server.count}명이야.'],
-  ['프리미엄 하트', '{user.mention} 환영해! 일부 기능은 프리미엄 하트 인증 후 사용할 수 있어.'],
+  ['친구 초대', '{user.name} 왔다! 다들 반겨줘. 지금 멤버는 {server.count}명이야.'],
+  ['프리미엄 하트', '{user.mention} 환영해. 일부 기능은 프리미엄 하트 인증 후 사용할 수 있어.'],
   ['짧은 문구', '{user.mention} 환영해!'],
-  ['퇴장 회수용', '{user.name} 님의 입장 카드는 퇴장하면 자동 정리돼요.'],
+  ['입장 회수', '{user.name} 님의 입장 카드는 퇴장하면 자동 정리돼요.'],
 ];
 
 const commandList = [
@@ -35,29 +35,26 @@ const commandList = [
   { name: 'sfw', description: '안전한 이미지 메뉴를 열어요.', heart: true },
   { name: '애니짤', description: '애니 이미지 메뉴를 열어요.', heart: true },
   { name: 'nsfw', description: 'NSFW 이미지 메뉴를 열어요.', heart: true },
-  { name: '나츠미서버셋업', description: '서버 전용 채널을 구성해요.', heart: true },
+  { name: '나츠미서버설정', description: '서버 전용 채널을 구성해요.', heart: true },
   { name: '청소', description: '메시지를 정리해요.' },
   { name: '킥', description: '멤버를 추방해요.' },
   { name: '밴', description: '멤버를 차단해요.' },
   { name: '타임아웃', description: '멤버를 시간 제한해요.' },
-  { name: 'tts설정', description: '대시보드 전용 관리로 전환 권장.' },
 ];
 
-const fallbackGuilds = [
-  {
-    id: 'preview',
-    name: '나츠미 미리보기 서버',
-    icon: '',
-    manageable: true,
-    channels: [
-      { id: 'notice', name: '공지', type: 'text' },
-      { id: 'welcome', name: '환영인사', type: 'text' },
-      { id: 'tts-chat', name: '나츠미-tts', type: 'text' },
-      { id: 'voice-main', name: '음성여우굴', type: 'voice' },
-      { id: 'cat-voice', name: '음성여우굴', type: 'category' },
-    ],
-  },
-];
+const fallbackGuilds = [{
+  id: 'preview',
+  name: '나츠미 미리보기 서버',
+  icon: '',
+  manageable: true,
+  channels: [
+    { id: 'notice', name: '공지', type: 'text' },
+    { id: 'welcome', name: '환영인사', type: 'text' },
+    { id: 'tts-chat', name: '나츠미-tts', type: 'text' },
+    { id: 'voice-main', name: '음성여우굴', type: 'voice' },
+    { id: 'cat-voice', name: '음성여우굴', type: 'category' },
+  ],
+}];
 
 const defaultSettings = {
   disabledCommands: [],
@@ -69,12 +66,24 @@ const defaultSettings = {
     cleanupOnLeave: true,
     message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해.',
     aiPrompt: '',
-    templates: sampleTemplates.slice(0, 3).map(([name, message]) => ({ name, message })),
   },
   notice: { enabled: true, channelId: '', message: '' },
   tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'ko_warm_female' },
   emojiUpscale: { enabled: false, channelId: '', webhookName: 'Natsumi Emoji Upscaler' },
 };
+
+const voiceList = [
+  ['ko_warm_female', '한국어 여성 - 따뜻한 안내'],
+  ['ko_clear_female', '한국어 여성 - 또렷한 진행'],
+  ['ko_soft_female', '한국어 여성 - 부드러운 애니톤'],
+  ['ko_bright_female', '한국어 여성 - 밝은 방송톤'],
+  ['ko_calm_male', '한국어 남성 - 차분한 안내'],
+  ['ja_soft_female', '일본어 여성 - 부드러운 애니톤'],
+  ['ja_bright_female', '일본어 여성 - 밝은 캐릭터톤'],
+  ['ja_calm_female', '일본어 여성 - 차분한 내레이션'],
+  ['ja_clear_male', '일본어 남성 - 또렷한 진행'],
+  ['default_natsumi', '기본 보이스 - 나츠미'],
+];
 
 const state = {
   theme: localStorage.getItem(themeKey) || 'dark',
@@ -84,70 +93,59 @@ const state = {
   selectedGuild: null,
   settings: structuredClone(defaultSettings),
   activeTab: 'overview',
-  busy: false,
-  notice: '',
   isOwner: false,
   announcements: [],
 };
 
-const localKey = (guildId) => `natsumi-dashboard-settings-${guildId}`;
-const esc = (value = '') => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const formValue = (selector) => document.querySelector(selector)?.value?.trim() || '';
-const currentGuild = () => state.selectedGuild || state.guilds[0] || fallbackGuilds[0];
-const channels = (type) => (currentGuild()?.channels || fallbackGuilds[0].channels).filter((channel) => !type || channel.type === type);
-
-function normalizeChannelType(type) {
-  if (type === 0 || type === 'GUILD_TEXT' || type === 'GuildText') return 'text';
-  if (type === 2 || type === 'GUILD_VOICE' || type === 'GuildVoice') return 'voice';
-  if (type === 4 || type === 'GUILD_CATEGORY' || type === 'GuildCategory') return 'category';
-  return type || 'text';
+function esc(value = '') {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-function normalizeGuild(guild) {
-  return {
-    ...guild,
-    channels: (guild.channels || []).map((channel) => ({
-      ...channel,
-      type: normalizeChannelType(channel.type),
-    })),
-  };
+async function api(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    ...options,
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return res.status === 204 ? {} : res.json();
 }
 
-function applyTheme(theme = state.theme) {
-  state.theme = theme === 'light' ? 'light' : 'dark';
-  document.documentElement.dataset.theme = state.theme;
+function applyTheme(next = state.theme) {
+  state.theme = next;
   localStorage.setItem(themeKey, state.theme);
+  document.documentElement.dataset.theme = state.theme;
 }
 
-function optionList(type, selected) {
-  return [
-    '<option value="">선택 안 함</option>',
-    ...channels(type).map((channel) => `<option value="${esc(channel.id)}" ${channel.id === selected ? 'selected' : ''}># ${esc(channel.name)}</option>`),
-  ].join('');
+function login() {
+  window.location.href = `${API_BASE}/auth/discord/dashboard`;
 }
 
-function voiceOptions(selected) {
-  const voices = [
-    ['ko_warm_female', '한국어 여성 - 포근한 안내'],
-    ['ko_bright_girl', '한국어 여성 - 밝은 애니톤'],
-    ['ko_soft_narrator', '한국어 여성 - 차분한 나레이션'],
-    ['ko_youthful', '한국어 소녀 - 경쾌한 말투'],
-    ['ko_default', '한국어 기본 - 안정적인 목소리'],
-    ['ja_anime_girl', '일본어 여성 - 애니 캐릭터'],
-    ['ja_soft_female', '일본어 여성 - 부드러운 톤'],
-    ['ja_energy_girl', '일본어 소녀 - 활기찬 톤'],
-    ['ja_narrator', '일본어 기본 - 나레이션'],
-    ['ja_default', '일본어 기본 - 안정적인 목소리'],
-  ];
-  return voices.map(([value, label]) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`).join('');
+function currentGuild() {
+  return state.selectedGuild || state.guilds[0] || fallbackGuilds[0];
+}
+
+function channels() {
+  return currentGuild().channels || [];
+}
+
+function localKey(guildId) {
+  return `natsumi-dashboard-settings-${guildId}`;
 }
 
 function shell(content) {
-  const loginLabel = state.loggedIn ? esc(state.profile?.username || '로그인됨') : 'Discord 로그인';
+  const loginLabel = state.loggedIn ? esc(state.profile?.username || '로그인됨') : '개발자 로그인';
   return `
     <div class="page-shell">
       <header class="topbar glass">
-        <button class="brand" data-action="home" type="button"><span><img src="${NATSUMI_PROFILE_IMAGE}" alt="" /></span><b>NATSUMI</b></button>
+        <button class="brand" data-action="home" type="button">
+          <span><img src="${NATSUMI_PROFILE_IMAGE}" alt="" /></span><b>NATSUMI</b>
+        </button>
         <div class="top-actions">
           <a class="ghost-link" href="${DASHBOARD_URL}" target="_blank" rel="noreferrer">대시보드 링크</a>
           <button class="ghost-btn" data-action="theme" type="button">${state.theme === 'light' ? '다크 모드' : '화이트 모드'}</button>
@@ -157,45 +155,43 @@ function shell(content) {
       ${content}
       <footer class="footer glass">
         <b>나츠미 대시보드</b>
-        <small>환영인사, 공지, 명령어 차단, TTS 설정을 서버별로 관리해요.</small>
+        <small>공지사항은 누구나 볼 수 있고, 작성과 설정은 개발자만 사용할 수 있어요.</small>
       </footer>
     </div>
   `;
 }
 
-function intro() {
+function publicNoticePage() {
   app.innerHTML = shell(`
-    <section class="hero glass">
-      <p class="eyebrow">Natsumi Server Console</p>
-      <h1>서버 설정을 한눈에 보고<br>나츠미를 원하는 방식으로 켜요</h1>
-      <p class="hero-desc">Discord 로그인 후 관리 가능한 서버를 선택하면 환영 카드, 공지, 명령어 ON/OFF, TTS 카테고리를 대시보드에서만 설정할 수 있어요.</p>
+    <section class="hero-panel glass notice-only">
+      <p class="eyebrow">Natsumi Notice Only</p>
+      <h1>나츠미 지원 서버</h1>
+      <p class="hero-desc">나츠미의 최신 소식과 점검 안내를 한눈에 볼 수 있어요. 서버 설정과 공지 작성은 개발자만 사용할 수 있어요.</p>
       <div class="hero-actions">
-        <button class="primary-btn" data-action="login" type="button">Discord로 시작</button>
-        <button class="soft-btn" data-action="preview" type="button">미리보기</button>
+        <button class="soft-btn" data-action="refresh-public" type="button">새로고침</button>
+        ${state.loggedIn && !state.isOwner ? '<span class="login-pill">개발자 전용 대시보드입니다</span>' : ''}
+        ${state.isOwner ? '<button class="primary-btn" data-action="owner-dashboard" type="button">개발자 대시보드 열기</button>' : ''}
       </div>
-      <div class="stats-strip">
-        <article><span>설정 방식</span><b>대시보드 전용</b></article>
-        <article><span>환영 카드</span><b>프로필 포함</b></article>
-        <article><span>명령어 차단</span><b>서버별 적용</b></article>
-      </div>
+      ${renderDeveloperAnnouncements()}
     </section>
   `);
 }
 
 function dashboard() {
+  if (!state.isOwner) return publicNoticePage();
   const guild = currentGuild();
   app.innerHTML = shell(`
     <div class="dashboard-shell">
       <aside class="sidebar glass">
         <div class="profile-mini">
           <div class="avatar"><img src="${state.profile?.avatar ? esc(state.profile.avatar) : NATSUMI_PROFILE_IMAGE}" alt="" /></div>
-          <div><b>${state.profile ? esc(state.profile.username) : '나츠미 관리자'}</b><small>${state.loggedIn ? 'Discord 로그인됨' : '미리보기 모드'}</small></div>
+          <div><b>${state.profile ? esc(state.profile.username) : '나츠미 관리자'}</b><small>개발자 모드</small></div>
         </div>
         <label class="select-label">서버 선택</label>
         <select class="wide-select" id="guildSelect">${state.guilds.map((g) => `<option value="${esc(g.id)}" ${g.id === guild.id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
         ${[
           ['overview', '한눈에 보기'],
-          ['settings', '내 설정'],
+          ['settings', '설정'],
           ['welcome', '환영인사'],
           ['notice', '공지 보내기'],
           ['commands', '명령어 켜고 끄기'],
@@ -207,7 +203,7 @@ function dashboard() {
       <main class="main glass">
         <header class="main-head">
           <div>
-            <p class="eyebrow">선택된 서버</p>
+            <p class="eyebrow">선택한 서버</p>
             <h2>${esc(guild.name)}</h2>
           </div>
           <button class="soft-btn" data-action="refresh" type="button">새로고침</button>
@@ -235,7 +231,7 @@ function renderDeveloperAnnouncements() {
     <section class="support-board" id="developer-notice">
       <div class="section-title">
         <h3>나츠미 지원 서버</h3>
-        <p>나츠미의 최신 소식과 점검 안내를 한눈에 볼 수 있어요.</p>
+        <p>개발자가 고정한 공지사항만 표시돼요.</p>
       </div>
       ${state.isOwner ? `
         <div class="notice-compose">
@@ -247,11 +243,11 @@ function renderDeveloperAnnouncements() {
       <div class="notice-feed">
         ${rows.map((row) => `
           <article class="support-notice-card">
-            <h4>📢 ${esc(row.title || '나츠미 지원서버 공지')}</h4>
+            <h4>${esc(row.title || '나츠미 지원서버 공지')}</h4>
             <p>${esc(row.message || '')}</p>
-            <small>🕒 ${row.createdAt ? new Date(row.createdAt).toLocaleString('ko-KR') : '최근 공지'}</small>
+            <small>${row.createdAt ? new Date(row.createdAt).toLocaleString('ko-KR') : '최근 공지'}</small>
           </article>
-        `).join('') || '<article class="support-notice-card"><h4>📢 공지사항</h4><p>아직 등록된 지원서버 공지가 없어요.</p></article>'}
+        `).join('') || '<article class="support-notice-card"><h4>공지사항</h4><p>아직 등록된 지원서버 공지가 없어요.</p></article>'}
       </div>
     </section>
   `;
@@ -264,10 +260,10 @@ function renderOverview() {
     ${renderDeveloperAnnouncements()}
     <section class="section-title">
       <h3>한눈에 보기</h3>
-      <p>나츠미가 들어가 있는 서버와 현재 켜진 기능을 빠르게 확인해요.</p>
+      <p>선택한 서버와 켜진 기능을 빠르게 확인해요.</p>
     </section>
     <div class="stat-row">
-      <article><span>관리 가능 서버</span><b>${state.guilds.length}</b></article>
+      <article><span>관리 가능한 서버</span><b>${state.guilds.length}</b></article>
       <article><span>채널 수</span><b>${channels().length}</b></article>
       <article><span>꺼진 명령어</span><b>${state.settings.disabledCommands?.length || 0}</b></article>
     </div>
@@ -281,7 +277,7 @@ function renderOverview() {
 function renderSettings() {
   const features = state.settings.features || {};
   return `
-    <section class="section-title"><h3>내 설정</h3><p>서버 기능을 전체적으로 켜고 끄는 홈이에요.</p></section>
+    <section class="section-title"><h3>설정</h3><p>서버 기능을 전체적으로 켜고 꺼요.</p></section>
     <div class="command-list">
       ${Object.entries(features).map(([key, value]) => `
         <article class="command-card">
@@ -297,22 +293,16 @@ function renderSettings() {
 function renderWelcome() {
   const welcome = state.settings.welcome || defaultSettings.welcome;
   return `
-    <section class="section-title">
-      <h3>환영인사</h3>
-      <p>설정하지 않으면 아무 메시지도 튀어나오지 않게 막아뒀어요. 켜면 입장/퇴장 카드가 프로필과 함께 전송돼요.</p>
-    </section>
+    <section class="section-title"><h3>환영인사</h3><p>채널과 문구를 지정하고 테스트 메시지로 확인해요.</p></section>
     <div class="form-grid">
       <label class="check-line"><input type="checkbox" id="welcomeEnabled" ${welcome.enabled ? 'checked' : ''}> 환영인사 켜기</label>
       <label class="check-line"><input type="checkbox" id="cleanupOnLeave" ${welcome.cleanupOnLeave !== false ? 'checked' : ''}> 멤버가 나가면 기존 환영 메시지 회수</label>
       <label>환영 채널<select id="welcomeChannel">${optionList('text', welcome.channelId)}</select></label>
       <label>퇴장 카드 채널<select id="leaveChannel">${optionList('text', welcome.leaveChannelId || welcome.channelId)}</select></label>
-      <label>AI 환영 프롬프트<textarea id="aiPrompt" placeholder="예: 새 멤버에게 짧고 따뜻한 애니풍 환영 인사를 만들어줘.">${esc(welcome.aiPrompt || '')}</textarea></label>
+      <label>AI 환영 프롬프트<textarea id="aiPrompt" placeholder="새 멤버에게 어떤 분위기로 인사할지 적어줘.">${esc(welcome.aiPrompt || '')}</textarea></label>
       <label>고정 메시지<textarea id="welcomeMessage" placeholder="변수를 넣어 환영 문구를 적어줘.">${esc(welcome.message || '')}</textarea></label>
     </div>
-    <section class="tool-card">
-      <h4>변수 삽입</h4>
-      <div class="chip-grid">${welcomeVariables.map((v) => `<button class="chip" data-insert="${esc(v)}" type="button">${esc(v)}</button>`).join('')}</div>
-    </section>
+    <section class="tool-card"><h4>변수 삽입</h4><div class="chip-grid">${welcomeVariables.map((v) => `<button class="chip" data-insert="${esc(v)}" type="button">${esc(v)}</button>`).join('')}</div></section>
     <section class="tool-card">
       <div class="split-head"><h4>샘플 템플릿 11개</h4><button class="ghost-btn" data-action="clear-template" type="button">모두 지우기</button></div>
       <div class="template-grid">${sampleTemplates.map(([name, text]) => `<button class="template-card" data-template="${esc(text)}" type="button"><b>${esc(name)}</b><small>${esc(text)}</small></button>`).join('')}</div>
@@ -331,7 +321,7 @@ function renderNotice() {
     <div class="form-grid">
       <label class="check-line"><input type="checkbox" id="noticeEnabled" ${notice.enabled !== false ? 'checked' : ''}> 공지 기능 켜기</label>
       <label>공지 채널<select id="noticeChannel">${optionList('text', notice.channelId)}</select></label>
-      <label>공지 내용<textarea id="noticeMessage" placeholder="공지할 내용을 적어줘.">${esc(notice.message || '')}</textarea></label>
+      <label>공지 내용<textarea id="noticeMessage" placeholder="공지 내용을 적어줘.">${esc(notice.message || '')}</textarea></label>
     </div>
     <div class="form-actions">
       <button class="soft-btn" data-action="save-notice" type="button">설정 저장</button>
@@ -343,16 +333,11 @@ function renderNotice() {
 function renderCommands() {
   const disabled = new Set(state.settings.disabledCommands || []);
   return `
-    <section class="section-title"><h3>명령어 켜고 끄기</h3><p>끄면 봇이 해당 서버에서 바로 “대시보드에서 꺼진 명령어”라고 안내하고 실행하지 않아요.</p></section>
+    <section class="section-title"><h3>명령어 켜고 끄기</h3><p>끄면 해당 서버에서 봇이 안내만 하고 실행하지 않도록 저장해요.</p></section>
     <div class="command-list">
       ${commandList.map((cmd) => {
         const enabled = !disabled.has(cmd.name);
-        return `
-          <article class="command-card">
-            <div><h4>/${esc(cmd.name)}</h4><p>${esc(cmd.description)}</p>${cmd.heart ? '<span class="heart-chip">프리미엄 하트</span>' : ''}</div>
-            <label class="switch"><input type="checkbox" data-command="${esc(cmd.name)}" ${enabled ? 'checked' : ''}><span></span></label>
-          </article>
-        `;
+        return `<article class="command-card"><div><h4>/${esc(cmd.name)}</h4><p>${esc(cmd.description)}</p>${cmd.heart ? '<span class="heart-chip">프리미엄 하트</span>' : ''}</div><label class="switch"><input type="checkbox" data-command="${esc(cmd.name)}" ${enabled ? 'checked' : ''}><span></span></label></article>`;
       }).join('')}
     </div>
     <div class="form-actions"><button class="primary-btn" data-action="save-commands" type="button">명령어 설정 저장</button></div>
@@ -377,7 +362,7 @@ function renderTts() {
 function renderEmoji() {
   const emoji = state.settings.emojiUpscale || defaultSettings.emojiUpscale;
   return `
-    <section class="section-title"><h3>이모지 업스케일</h3><p>기본은 항상 꺼짐이에요. 관리자가 켠 채널에서만 이미지/이모지 확대 웹훅이 반응하고, 임시 웹훅은 처리 후 정리하도록 봇 설정에 저장해요.</p></section>
+    <section class="section-title"><h3>이모지 업스케일</h3><p>기본은 항상 꺼짐이에요. 관리자가 켠 채널에서만 이미지와 이모지를 처리해요.</p></section>
     <div class="form-grid">
       <label class="check-line"><input type="checkbox" id="emojiEnabled" ${emoji.enabled ? 'checked' : ''}> 이모지 업스케일 켜기</label>
       <label>반응 채널<select id="emojiChannel">${optionList('text', emoji.channelId)}</select></label>
@@ -389,10 +374,8 @@ function renderEmoji() {
 
 function renderQna() {
   return `
-    <section class="section-title"><h3>질문답변</h3><p>사용자는 질문을 남기고, 개발자는 답변을 달 수 있어요. 공지처럼 패널 형태로 보이게 백엔드에 저장돼요.</p></section>
-    <div class="form-grid">
-      <label>질문 작성<textarea id="questionText" placeholder="궁금한 내용을 적어줘."></textarea></label>
-    </div>
+    <section class="section-title"><h3>질문답변</h3><p>사용자는 질문을 남기고 개발자는 답변을 달 수 있어요.</p></section>
+    <div class="form-grid"><label>질문 작성<textarea id="questionText" placeholder="궁금한 내용을 적어줘."></textarea></label></div>
     <div class="form-actions">
       <button class="soft-btn" data-action="load-qna" type="button">질문 목록 불러오기</button>
       <button class="primary-btn" data-action="send-question" type="button">질문 보내기</button>
@@ -402,88 +385,44 @@ function renderQna() {
 }
 
 function featureName(key) {
-  if (key === 'level') return '레벨/랭크';
-  return ({ welcome: '환영인사', notice: '공지', ticket: '문의', tts: 'TTS', ai: 'AI 채팅', shop: '웹상점', emojiUpscale: '이모지 업스케일' })[key] || key;
+  return ({
+    level: '레벨/랭크',
+    welcome: '환영인사',
+    notice: '공지',
+    ticket: '티켓',
+    tts: 'TTS',
+    ai: 'AI',
+    shop: '웹상점',
+    emojiUpscale: '이모지 업스케일',
+  })[key] || key;
 }
 
 function featureDesc(key) {
-  if (key === 'level') return '대시보드에서 레벨 시스템을 켜고 랭크카드를 사용할 수 있게 해요.';
   return ({
-    welcome: '입장/퇴장 카드와 환영 메시지를 관리해요.',
-    notice: '대시보드 공지 전송을 허용해요.',
-    ticket: '문의 채널과 로그 기능을 허용해요.',
-    tts: '전용 채팅방에 쓴 글을 음성 채널에서 읽어요.',
-    ai: 'AI 채팅과 그림공방을 허용해요.',
-    shop: '웹상점과 후원 보상을 허용해요.',
-    emojiUpscale: '설정한 채널에서만 이미지/이모지 업스케일 반응을 허용해요.',
-  })[key] || '서버 기능을 켜거나 꺼요.';
+    level: '랭크카드와 경험치 표시를 제어해요.',
+    welcome: '입장과 퇴장 카드를 제어해요.',
+    notice: '공지 전송 기능을 제어해요.',
+    ticket: '티켓 설정 기능을 제어해요.',
+    tts: '채팅을 음성으로 읽는 기능을 제어해요.',
+    ai: 'AI 채팅과 그림 기능을 제어해요.',
+    shop: '웹상점과 후원 보상 기능을 제어해요.',
+    emojiUpscale: '이모지 업스케일 자동 반응을 제어해요.',
+  })[key] || '서버 기능을 제어해요.';
 }
 
-function collectSettingsFromDom(scope) {
-  const next = structuredClone(state.settings);
-  if (scope === 'settings') {
-    document.querySelectorAll('[data-feature]').forEach((input) => {
-      next.features[input.dataset.feature] = input.checked;
-    });
-  }
-  if (scope === 'welcome') {
-    next.features.welcome = document.querySelector('#welcomeEnabled')?.checked || false;
-    next.welcome = {
-      ...next.welcome,
-      enabled: next.features.welcome,
-      cleanupOnLeave: document.querySelector('#cleanupOnLeave')?.checked !== false,
-      channelId: formValue('#welcomeChannel'),
-      leaveChannelId: formValue('#leaveChannel'),
-      aiPrompt: formValue('#aiPrompt'),
-      message: formValue('#welcomeMessage'),
-    };
-  }
-  if (scope === 'notice') {
-    next.features.notice = document.querySelector('#noticeEnabled')?.checked !== false;
-    next.notice = { ...next.notice, enabled: next.features.notice, channelId: formValue('#noticeChannel'), message: formValue('#noticeMessage') };
-  }
-  if (scope === 'commands') {
-    const disabled = [];
-    document.querySelectorAll('[data-command]').forEach((input) => {
-      if (!input.checked) disabled.push(input.dataset.command);
-    });
-    next.disabledCommands = disabled;
-  }
-  if (scope === 'tts') {
-    next.features.tts = document.querySelector('#ttsEnabled')?.checked || false;
-    next.tts = {
-      enabled: next.features.tts,
-      categoryId: formValue('#ttsCategory'),
-      textChannelId: formValue('#ttsText'),
-      voiceChannelId: formValue('#ttsVoiceChannel'),
-      voice: formValue('#ttsVoice'),
-    };
-  }
-  if (scope === 'emoji') {
-    next.features.emojiUpscale = document.querySelector('#emojiEnabled')?.checked || false;
-    next.emojiUpscale = {
-      enabled: next.features.emojiUpscale,
-      channelId: formValue('#emojiChannel'),
-      webhookName: formValue('#emojiWebhookName') || 'Natsumi Emoji Upscaler',
-    };
-  }
-  state.settings = next;
-  return next;
+function optionList(type, selected = '') {
+  const typed = channels().filter((channel) => channel.type === type);
+  const label = type === 'voice' ? '음성 채널 선택' : type === 'category' ? '카테고리 선택' : '채팅 채널 선택';
+  return `<option value="">${label}</option>${typed.map((channel) => `<option value="${esc(channel.id)}" ${channel.id === selected ? 'selected' : ''}># ${esc(channel.name)}</option>`).join('')}`;
 }
 
-async function api(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    ...options,
-  });
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  return res.json().catch(() => ({}));
+function voiceOptions(selected = '') {
+  return voiceList.map(([value, label]) => `<option value="${esc(value)}" ${value === selected ? 'selected' : ''}>${esc(label)}</option>`).join('');
 }
 
 async function loadSession() {
   try {
-    const data = await api('/api/dashboard/session');
+    const data = await api('/api/auth/me');
     state.loggedIn = Boolean(data.user);
     state.profile = data.user || null;
     state.isOwner = Boolean(data.isOwner);
@@ -495,17 +434,26 @@ async function loadSession() {
 }
 
 async function loadGuilds() {
+  if (!state.isOwner) {
+    state.guilds = [];
+    state.selectedGuild = null;
+    return;
+  }
   try {
     const data = await api('/api/dashboard/guilds');
-    state.guilds = data.guilds?.length ? data.guilds.map(normalizeGuild) : fallbackGuilds;
+    state.guilds = data.guilds?.length ? data.guilds : fallbackGuilds;
   } catch {
     state.guilds = fallbackGuilds;
   }
-  const savedId = localStorage.getItem(selectedGuildKey);
-  state.selectedGuild = state.guilds.find((guild) => guild.id === savedId) || state.guilds[0];
+  const saved = localStorage.getItem(selectedGuildKey);
+  state.selectedGuild = state.guilds.find((guild) => guild.id === saved) || state.guilds[0];
 }
 
 async function loadSettings() {
+  if (!state.isOwner) {
+    state.settings = structuredClone(defaultSettings);
+    return;
+  }
   const guild = currentGuild();
   try {
     const data = await api(`/api/dashboard/guilds/${guild.id}/settings`);
@@ -526,6 +474,7 @@ async function loadDeveloperAnnouncements() {
 }
 
 async function sendDeveloperAnnouncement() {
+  if (!state.isOwner) return publicNoticePage();
   const title = formValue('#developerNoticeTitle') || '나츠미 업데이트';
   const message = formValue('#developerNoticeMessage');
   if (!message) return toast('공지 내용을 먼저 적어줘.');
@@ -544,35 +493,77 @@ async function sendDeveloperAnnouncement() {
   }
 }
 
-async function saveSettings(scope) {
+function formValue(selector) {
+  return document.querySelector(selector)?.value?.trim() || '';
+}
+
+function collectSettingsFromDom() {
+  const disabledCommands = [...document.querySelectorAll('[data-command]')]
+    .filter((input) => !input.checked)
+    .map((input) => input.dataset.command);
+  return {
+    ...state.settings,
+    disabledCommands,
+    features: Object.fromEntries([...document.querySelectorAll('[data-feature]')].map((input) => [input.dataset.feature, input.checked])),
+    welcome: {
+      enabled: document.querySelector('#welcomeEnabled')?.checked || false,
+      cleanupOnLeave: document.querySelector('#cleanupOnLeave')?.checked !== false,
+      channelId: formValue('#welcomeChannel'),
+      leaveChannelId: formValue('#leaveChannel'),
+      aiPrompt: formValue('#aiPrompt'),
+      message: formValue('#welcomeMessage'),
+    },
+    notice: {
+      enabled: document.querySelector('#noticeEnabled')?.checked !== false,
+      channelId: formValue('#noticeChannel'),
+      message: formValue('#noticeMessage'),
+    },
+    tts: {
+      enabled: document.querySelector('#ttsEnabled')?.checked || false,
+      categoryId: formValue('#ttsCategory'),
+      textChannelId: formValue('#ttsText'),
+      voiceChannelId: formValue('#ttsVoiceChannel'),
+      voice: formValue('#ttsVoice') || 'ko_warm_female',
+    },
+    emojiUpscale: {
+      enabled: document.querySelector('#emojiEnabled')?.checked || false,
+      channelId: formValue('#emojiChannel'),
+      webhookName: formValue('#emojiWebhookName') || 'Natsumi Emoji Upscaler',
+    },
+  };
+}
+
+async function saveSettings() {
+  if (!state.isOwner) return publicNoticePage();
   const guild = currentGuild();
-  const settings = collectSettingsFromDom(scope);
+  const settings = collectSettingsFromDom();
+  state.settings = settings;
   localStorage.setItem(localKey(guild.id), JSON.stringify(settings));
   try {
     await api(`/api/dashboard/guilds/${guild.id}/settings`, { method: 'PATCH', body: JSON.stringify({ settings }) });
-    toast('저장했어. 봇에도 반영될 거야.');
+    toast('저장했어. 봇에 반영될 거야.');
   } catch {
-    toast('API가 아직 연결되지 않아 브라우저에 임시 저장했어.');
+    toast('API 연결 전이라 브라우저에 임시 저장했어.');
   }
 }
 
 async function sendWelcomeTest() {
-  await saveSettings('welcome');
+  await saveSettings();
   try {
     await api(`/api/dashboard/guilds/${currentGuild().id}/welcome/test`, { method: 'POST', body: JSON.stringify({ settings: state.settings }) });
     toast('테스트 환영 메시지를 보냈어.');
   } catch {
-    toast('테스트 API가 아직 준비되지 않았어. 설정 저장은 완료했어.');
+    toast('테스트 API를 확인해야 해. 설정 저장은 완료했어.');
   }
 }
 
 async function sendNotice() {
-  await saveSettings('notice');
+  await saveSettings();
   try {
     await api(`/api/dashboard/guilds/${currentGuild().id}/notice`, { method: 'POST', body: JSON.stringify({ notice: state.settings.notice }) });
     toast('공지 전송 요청을 보냈어.');
   } catch {
-    toast('공지 API가 아직 준비되지 않았어. 설정 저장은 완료했어.');
+    toast('공지 API를 확인해야 해. 설정 저장은 완료했어.');
   }
 }
 
@@ -585,7 +576,7 @@ async function sendQuestion() {
     toast('질문을 보냈어.');
     await loadQuestions();
   } catch {
-    toast('질문 API가 아직 준비되지 않았거나 로그인이 필요해.');
+    toast('질문 API가 아직 연결되지 않았거나 로그인이 필요해.');
   }
 }
 
@@ -594,25 +585,17 @@ async function loadQuestions() {
   if (!list) return;
   try {
     const data = await api(`/api/dashboard/guilds/${currentGuild().id}/questions`);
-    const rows = data.questions || [];
-    list.innerHTML = rows.map((row) => `
+    list.innerHTML = (data.questions || []).map((q) => `
       <article class="command-card">
-        <div>
-          <h4>${esc(row.username || row.userId || '질문자')}</h4>
-          <p>${esc(row.question)}</p>
-          ${row.answer ? `<span class="heart-chip">답변: ${esc(row.answer)}</span>` : '<span class="heart-chip">답변 대기</span>'}
-        </div>
+        <div><h4>${esc(q.question || '질문')}</h4><p>${esc(q.answer || '아직 답변 없음')}</p></div>
       </article>
-    `).join('') || '<p class="empty">아직 질문이 없어.</p>';
+    `).join('') || '<article class="command-card"><div><h4>질문 없음</h4><p>아직 등록된 질문이 없어요.</p></div></article>';
   } catch {
-    list.innerHTML = '<p class="empty">질문 목록을 불러오지 못했어.</p>';
+    list.innerHTML = '<article class="command-card"><div><h4>불러오기 실패</h4><p>API 연결을 확인해줘.</p></div></article>';
   }
 }
 
 function toast(message) {
-  state.notice = message;
-  const old = document.querySelector('.toast');
-  old?.remove();
   const el = document.createElement('div');
   el.className = 'toast';
   el.textContent = message;
@@ -620,27 +603,24 @@ function toast(message) {
   setTimeout(() => el.remove(), 3200);
 }
 
-function login() {
-  window.location.href = `${API_BASE}/auth/discord/dashboard`;
-}
-
 app.addEventListener('click', async (event) => {
   const target = event.target.closest('button');
   if (!target) return;
 
-  if (target.dataset.action === 'home') return state.guilds.length ? dashboard() : intro();
+  if (target.dataset.action === 'home') return state.isOwner ? dashboard() : publicNoticePage();
   if (target.dataset.action === 'theme') {
     applyTheme(state.theme === 'light' ? 'dark' : 'light');
-    return state.guilds.length ? dashboard() : intro();
+    return state.isOwner ? dashboard() : publicNoticePage();
   }
   if (target.dataset.action === 'login') return login();
-  if (target.dataset.action === 'preview') {
-    state.guilds = fallbackGuilds;
-    state.selectedGuild = fallbackGuilds[0];
-    state.loggedIn = false;
-    await loadSettings();
-    return dashboard();
+  if (target.dataset.action === 'refresh-public') {
+    await loadSession();
+    await loadDeveloperAnnouncements();
+    return state.isOwner ? dashboard() : publicNoticePage();
   }
+  if (target.dataset.action === 'owner-dashboard') return state.isOwner ? dashboard() : publicNoticePage();
+  if (!state.isOwner) return publicNoticePage();
+
   if (target.dataset.action === 'refresh') {
     await Promise.all([loadSession(), loadGuilds()]);
     await loadSettings();
@@ -668,21 +648,21 @@ app.addEventListener('click', async (event) => {
     if (prompt) prompt.value = '';
     toast('템플릿과 작성 내용을 비웠어.');
   }
-  if (target.dataset.action === 'save-settings') return saveSettings('settings');
-  if (target.dataset.action === 'save-welcome') return saveSettings('welcome');
+  if (target.dataset.action === 'save-settings') return saveSettings();
+  if (target.dataset.action === 'save-welcome') return saveSettings();
   if (target.dataset.action === 'test-welcome') return sendWelcomeTest();
-  if (target.dataset.action === 'save-notice') return saveSettings('notice');
+  if (target.dataset.action === 'save-notice') return saveSettings();
   if (target.dataset.action === 'send-notice') return sendNotice();
-  if (target.dataset.action === 'save-commands') return saveSettings('commands');
-  if (target.dataset.action === 'save-tts') return saveSettings('tts');
-  if (target.dataset.action === 'save-emoji') return saveSettings('emoji');
+  if (target.dataset.action === 'save-commands') return saveSettings();
+  if (target.dataset.action === 'save-tts') return saveSettings();
+  if (target.dataset.action === 'save-emoji') return saveSettings();
   if (target.dataset.action === 'send-question') return sendQuestion();
   if (target.dataset.action === 'load-qna') return loadQuestions();
   if (target.dataset.action === 'send-developer-notice') return sendDeveloperAnnouncement();
 });
 
 app.addEventListener('change', async (event) => {
-  if (event.target.id === 'guildSelect') {
+  if (event.target.id === 'guildSelect' && state.isOwner) {
     state.selectedGuild = state.guilds.find((guild) => guild.id === event.target.value) || state.guilds[0];
     localStorage.setItem(selectedGuildKey, state.selectedGuild.id);
     await loadSettings();
@@ -692,11 +672,15 @@ app.addEventListener('change', async (event) => {
 
 applyTheme();
 await loadSession();
-await loadGuilds();
-await loadSettings();
 await loadDeveloperAnnouncements();
-if (state.loggedIn || state.guilds.length) dashboard();
-else intro();
+if (state.isOwner) {
+  await loadGuilds();
+  await loadSettings();
+  dashboard();
+} else {
+  publicNoticePage();
+}
+
 if (new URLSearchParams(window.location.search).get('panel') === 'developer-notice') {
-  setTimeout(() => document.querySelector('#developer-notice')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  setTimeout(() => document.querySelector('#developer-notice')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
 }
