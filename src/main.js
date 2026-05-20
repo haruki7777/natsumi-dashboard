@@ -1,6 +1,6 @@
 import './style.css';
 
-const DASHBOARD_SERVER_URL = 'https://natsumidashboard.kro.kr';
+const DASHBOARD_SERVER_URL = 'http://natsumidashboard.kro.kr:25901';
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || (location.hostname === 'localhost' ? window.location.origin : DASHBOARD_SERVER_URL)).replace(/\/$/, '');
 const NATSUMI_PROFILE_IMAGE = '/natsumi-profile-03.jpg';
 const themeKey = 'natsumi-dashboard-theme';
