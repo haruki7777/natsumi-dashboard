@@ -1,34 +1,31 @@
 import './style.css';
 
-const DASHBOARD_SERVER_URL = 'http://natsumidashboard.kro.kr:25901';
+const DASHBOARD_SERVER_URL = 'https://natsumidashboard.kro.kr';
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || (location.hostname === 'localhost' ? window.location.origin : DASHBOARD_SERVER_URL)).replace(/\/$/, '');
 const NATSUMI_PROFILE_IMAGE = '/natsumi-profile-03.jpg';
 const themeKey = 'natsumi-dashboard-theme';
 const selectedGuildKey = 'natsumi-dashboard-selected-guild';
 const app = document.getElementById('app');
 
-const adminHiddenCommands = new Set(['개발자공지', '개발자답변', '명령어리로드', 'natsufix']);
+const ownerOnlyCommands = new Set(['개발자공지', '개발자답변', '명령어리로드', 'natsufix']);
 const commandList = [
-  ['도움말', '기본 도움말과 링크를 보여줘요.', 'general'],
-  ['핑', '봇 지연시간을 확인해요.', 'general'],
-  ['진단', '봇 상태와 런타임 상태를 확인해요.', 'general'],
+  ['도움말', '기본 안내와 링크를 보여줘요.', 'general'],
+  ['핑', '봇 지연시간과 상태를 확인해요.', 'general'],
+  ['진단', '봇 상태와 서버 연결을 확인해요.', 'general'],
   ['랭크', '레벨과 랭크카드를 보여줘요.', 'general'],
-  ['랭킹', '레벨 순위를 확인해요.', 'general'],
+  ['랭킹', '서버 순위를 확인해요.', 'general'],
   ['유저정보', '유저 정보와 배너를 확인해요.', 'general'],
   ['서버정보', '서버 정보를 확인해요.', 'general'],
   ['웹상점', '웹상점 링크를 열어요.', 'general'],
-  ['나츠미서버설정', '나츠미 전용 채널을 구성해요.', 'general', true],
+  ['나츠미서버설정', '대시보드로 이동해요.', 'general', true],
   ['투표', '간단한 투표를 만들어요.', 'general'],
   ['문의', '개발자에게 문의를 보내요.', 'util'],
   ['이모지스틸', '이모지를 서버에 가져와요.', 'util'],
-  ['배너', '유저 배너를 확인해요.', 'util'],
-  ['개인음성채널', '개인 음성방을 설정해요.', 'util'],
-  ['tts설정', 'TTS 설정 명령어예요. 대시보드 관리 권장.', 'util'],
   ['밴', '멤버를 차단해요.', 'mod'],
   ['킥', '멤버를 추방해요.', 'mod'],
   ['타임아웃', '멤버에게 타임아웃을 걸어요.', 'mod'],
   ['청소', '메시지를 정리해요.', 'mod'],
-  ['공지', '서버 공지를 보냅니다.', 'mod'],
+  ['공지', '서버 공지를 보내요.', 'mod'],
   ['금지어', '금지어를 관리해요.', 'mod'],
   ['경고', '경고를 추가, 차감, 조회해요.', 'mod'],
   ['경고설정', '경고 로그와 자동 추방을 설정해요.', 'mod'],
@@ -40,32 +37,12 @@ const commandList = [
   ['nsfw3', 'NSFW 이미지 메뉴 3을 열어요.', 'image', true],
   ['ai채팅', 'AI 채팅 기능을 사용해요.', 'ai'],
   ['애니굿즈뽑기', '애니 굿즈 뽑기를 해요.', 'game'],
-  ['도감', '수집 도감을 확인해요.', 'game'],
+  ['가방', '수집 가방을 확인해요.', 'game'],
   ['두더지', '두더지 속도전을 플레이해요.', 'game'],
   ['낚시', '낚시 게임을 플레이해요.', 'game'],
   ['슬롯', '슬롯 게임을 플레이해요.', 'game'],
   ['인벤토리', '가방을 확인해요.', 'game'],
-].filter(([name]) => !adminHiddenCommands.has(name)).map(([name, description, group, heart]) => ({ name, description, group, heart }));
-
-const welcomeVariables = [
-  '{user}', '{user.name}', '{user.tag}', '{user.id}', '{user.mention}',
-  '{server}', '{server.name}', '{server.id}', '{server.count}', '{member.count}',
-  '{account.created}', '{joined.at}', '{owner.id}', '{random.welcome}',
-];
-
-const sampleTemplates = [
-  ['첫 인사', '{user.mention} 어서 와! {server.name}의 {member.count}번째 별이 되어줘서 고마워.'],
-  ['랭크 카드', '환영해, {user.name}! 프로필 카드를 준비했어. {server.name}에서 천천히 둘러봐.'],
-  ['관리 안내', '{user.mention} 님이 입장했어요. 규칙을 확인하고 즐거운 시간 보내주세요.'],
-  ['친근한 말투', '{random.welcome} {user.name}! 기다리고 있었어.'],
-  ['AI 프롬프트', '새 멤버 {user.name}에게 짧고 따뜻한 나츠미식 환영 인사를 만들어줘.'],
-  ['게임센터', 'PRESS START, {user.name}! {server.name} 모험을 시작했어.'],
-  ['차분한 안내', '{user.mention} 님, 환영합니다. 필요한 안내는 공지 채널에서 확인해주세요.'],
-  ['친구 초대', '{user.name} 왔다! 다들 반겨줘. 지금 멤버는 {server.count}명이야.'],
-  ['프리미엄 하트', '{user.mention} 환영해. 일부 기능은 프리미엄 하트 인증 후 사용할 수 있어.'],
-  ['짧은 문구', '{user.mention} 환영해!'],
-  ['입장 회수', '{user.name} 님의 입장 카드는 퇴장하면 자동 정리돼요.'],
-];
+].filter(([name]) => !ownerOnlyCommands.has(name)).map(([name, description, group, heart]) => ({ name, description, group, heart }));
 
 const voiceList = [
   ['ko_warm_female', '한국어 여성 - 따뜻한 안내'],
@@ -78,6 +55,26 @@ const voiceList = [
   ['ja_calm_female', '일본어 여성 - 차분한 내레이션'],
   ['ja_clear_male', '일본어 남성 - 또렷한 진행'],
   ['default_natsumi', '기본 보이스 - 나츠미'],
+];
+
+const welcomeVariables = [
+  '{user}', '{user.name}', '{user.tag}', '{user.id}', '{user.mention}',
+  '{server}', '{server.name}', '{server.id}', '{server.count}', '{member.count}',
+  '{account.created}', '{joined.at}', '{owner.id}', '{random.welcome}',
+];
+
+const sampleTemplates = [
+  ['첫 인사', '{user.mention} 어서 와! {server.name}의 {member.count}번째 별이 되어줘서 고마워.'],
+  ['랭크 카드', '환영해, {user.name}! 프로필 카드도 곧 준비해둘게.'],
+  ['관리 안내', '{user.mention} 님이 입장했어요. 규칙을 확인하고 즐겁게 지내주세요.'],
+  ['친근한 말투', '{random.welcome} {user.name}! 기다리고 있었어.'],
+  ['AI 프롬프트', '새 멤버 {user.name}에게 짧고 따뜻한 나츠미식 환영 인사를 만들어줘.'],
+  ['게임센터', 'PRESS START, {user.name}! {server.name} 모험을 시작했어.'],
+  ['차분한 안내', '{user.mention} 님, 환영합니다. 필요한 안내는 공지 채널에서 확인해주세요.'],
+  ['친구 초대', '{user.name} 등장! 다들 반겨줘. 지금 멤버는 {server.count}명이야.'],
+  ['프리미엄 하트', '{user.mention} 환영해! 일부 기능은 프리미엄 하트 인증 후 사용할 수 있어.'],
+  ['짧은 문구', '{user.mention} 환영해.'],
+  ['입장 회수', '{user.name} 님의 입장 카드는 퇴장하면 자동 정리돼요.'],
 ];
 
 const fallbackGuilds = [{
@@ -171,6 +168,7 @@ function shell(content) {
             <input type="checkbox" data-action="theme-toggle" ${state.theme === 'dark' ? 'checked' : ''}>
             <span></span>
           </label>
+          <button class="icon-menu-btn" data-action="mobile-menu" type="button" aria-label="메뉴">☰</button>
           ${state.loggedIn
             ? `<div class="login-pill"><img src="${esc(avatarUrl())}" alt="" /><b>${esc(profileName)}</b></div>`
             : `<button class="primary-btn" data-action="login" type="button">Discord Login</button>`}
@@ -190,10 +188,9 @@ function publicNoticePage() {
     <main class="hero-panel glass">
       <p class="eyebrow">Natsumi Notice</p>
       <h1>나츠미 지원 서버</h1>
-      <p class="hero-desc">나츠미의 최신 공지와 점검 안내를 확인할 수 있어요.</p>
+      <p class="hero-desc">나츠미의 최신 소식과 점검 안내를 한눈에 볼 수 있어요.</p>
       <div class="hero-actions">
-        <button class="soft-btn" data-action="refresh-public" type="button">Refresh</button>
-        ${state.loggedIn && !state.isOwner ? '<span class="login-pill text-only">개발자 전용 대시보드입니다</span>' : ''}
+        <button class="soft-btn" data-action="refresh-public" type="button">새로고침</button>
         ${state.isOwner ? '<button class="primary-btn" data-action="owner-dashboard" type="button">관리자 모드</button>' : ''}
       </div>
       ${renderDeveloperAnnouncements()}
@@ -228,7 +225,7 @@ function dashboard() {
       <main class="main glass">
         <header class="main-head">
           <div><p class="eyebrow">Selected Server</p><h2>${esc(guild.name)}</h2></div>
-          <button class="soft-btn" data-action="refresh" type="button">Refresh</button>
+          <button class="soft-btn" data-action="refresh" type="button">새로고침</button>
         </header>
         <div id="panel">${renderPanel()}</div>
       </main>
@@ -250,7 +247,7 @@ function renderDeveloperAnnouncements() {
   const rows = state.announcements || [];
   return `
     <section class="support-board" id="developer-notice">
-      <div class="section-title"><h3>📢 공지사항</h3><p>봇의 개발자 공지 명령어로 올라온 소식이에요.</p></div>
+      <div class="section-title"><h3>공지사항</h3><p>봇의 개발자 공지 명령어로 올라온 소식이에요.</p></div>
       <div class="notice-feed">
         ${rows.map((row) => `
           <article class="support-notice-card">
@@ -269,10 +266,10 @@ function renderDeveloperAnnouncements() {
 function renderOverview() {
   const guild = currentGuild();
   const status = state.botStatus || {};
-  const featureEntries = Object.entries(state.settings.features || {}).filter(([key]) => key !== 'notice');
+  const featureEntries = Object.entries(state.settings.features || {});
   return `
     ${renderDeveloperAnnouncements()}
-    <section class="section-title"><h3>한눈에 보기</h3><p>공지, API 연결, 봇 서버 상태를 한 화면에서 확인해요.</p></section>
+    <section class="section-title"><h3>한눈에 보기</h3><p>공지, API 연결, 봇 서버 상태를 첫 화면에서 확인해요.</p></section>
     <div class="stat-row">
       <article><span>API</span><b>${status.apiOk === false ? '주의' : '정상'}</b></article>
       <article><span>나츠미가 지키는 서버</span><b>${status.guildCount ?? '확인 중'}</b></article>
@@ -292,7 +289,7 @@ function renderSettings() {
   return `
     <section class="section-title"><h3>설정</h3><p>서버 기능을 전체적으로 켜고 꺼요.</p></section>
     <div class="command-list">
-      ${Object.entries(features).filter(([key]) => key !== 'notice').map(([key, value]) => `
+      ${Object.entries(features).map(([key, value]) => `
         <article class="command-card">
           <div><h4>${featureName(key)}</h4><p>${featureDesc(key)}</p></div>
           <label class="switch"><input type="checkbox" data-feature="${key}" ${value ? 'checked' : ''}><span></span></label>
@@ -312,8 +309,8 @@ function renderWelcome() {
       <label class="check-line"><input type="checkbox" id="cleanupOnLeave" ${welcome.cleanupOnLeave !== false ? 'checked' : ''}> 멤버가 나가면 기존 환영 메시지 회수</label>
       <label>환영 채널<select id="welcomeChannel">${optionList('text', welcome.channelId)}</select></label>
       <label>퇴장 카드 채널<select id="leaveChannel">${optionList('text', welcome.leaveChannelId || welcome.channelId)}</select></label>
-      <label>AI 환영 프롬프트<textarea id="aiPrompt" placeholder="새 멤버에게 어떤 분위기로 인사할지 적어줘.">${esc(welcome.aiPrompt || '')}</textarea></label>
-      <label>고정 메시지<textarea id="welcomeMessage" placeholder="변수를 넣어 환영 문구를 적어줘.">${esc(welcome.message || '')}</textarea></label>
+      <label>AI 환영 프롬프트<textarea id="aiPrompt" placeholder="새 멤버에게 어떤 분위기로 인사할지 적어줘">${esc(welcome.aiPrompt || '')}</textarea></label>
+      <label>고정 메시지<textarea id="welcomeMessage" placeholder="변수를 넣어 환영 문구를 적어줘">${esc(welcome.message || '')}</textarea></label>
     </div>
     <section class="tool-card"><h4>변수 삽입</h4><div class="chip-grid">${welcomeVariables.map((v) => `<button class="chip" data-insert="${esc(v)}" type="button">${esc(v)}</button>`).join('')}</div></section>
     <section class="tool-card">
@@ -330,7 +327,7 @@ function renderWelcome() {
 function renderCommands() {
   const disabled = new Set(state.settings.disabledCommands || []);
   return `
-    <section class="section-title"><h3>명령어 켜고 끄기</h3><p>관리자/오너 전용 명령어는 제외하고, 서버에서 쓸 일반 기능 명령어를 켜고 꺼요.</p></section>
+    <section class="section-title"><h3>명령어 켜고 끄기</h3><p>개발자/오너 전용 명령어는 제외하고 일반 기능 명령어만 제어해요.</p></section>
     <div class="command-list dense">
       ${commandList.map((cmd) => {
         const enabled = !disabled.has(cmd.name);
@@ -371,8 +368,8 @@ function renderEmoji() {
 
 function renderQna() {
   return `
-    <section class="section-title"><h3>질문답변</h3><p>사용자는 질문을 남기고 개발자는 답변을 달 수 있어요.</p></section>
-    <div class="form-grid"><label>질문 작성<textarea id="questionText" placeholder="궁금한 내용을 적어줘."></textarea></label></div>
+    <section class="section-title"><h3>질문답변</h3><p>사용자는 질문을 남기고 개발자는 답변할 수 있어요.</p></section>
+    <div class="form-grid"><label>질문 작성<textarea id="questionText" placeholder="궁금한 내용을 적어줘"></textarea></label></div>
     <div class="form-actions">
       <button class="soft-btn" data-action="load-qna" type="button">질문 목록 불러오기</button>
       <button class="primary-btn" data-action="send-question" type="button">질문 보내기</button>
@@ -533,7 +530,7 @@ async function sendWelcomeTest() {
     await api(`/api/dashboard/guilds/${currentGuild().id}/welcome/test`, { method: 'POST', body: JSON.stringify({ settings: state.settings }) });
     toast('테스트 환영 메시지를 보냈어.');
   } catch {
-    toast('테스트 API를 확인해야 해. 설정 저장은 완료했어.');
+    toast('테스트 API를 확인해야 해. 설정 저장은 완료됐어.');
   }
 }
 
