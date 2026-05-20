@@ -2,6 +2,7 @@ import './style.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://natsumi-game.kro.kr:25772';
 const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || 'http://natsumidashboard.kro.kr/';
+const NATSUMI_PROFILE_IMAGE = '/natsumi-profile-03.jpg';
 const themeKey = 'natsumi-dashboard-theme';
 const selectedGuildKey = 'natsumi-dashboard-selected-guild';
 
@@ -145,7 +146,7 @@ function shell(content) {
   return `
     <div class="page-shell">
       <header class="topbar glass">
-        <button class="brand" data-action="home" type="button"><span>N</span><b>NATSUMI</b></button>
+        <button class="brand" data-action="home" type="button"><span><img src="${NATSUMI_PROFILE_IMAGE}" alt="" /></span><b>NATSUMI</b></button>
         <div class="top-actions">
           <a class="ghost-link" href="${DASHBOARD_URL}" target="_blank" rel="noreferrer">대시보드 링크</a>
           <button class="ghost-btn" data-action="theme" type="button">${state.theme === 'light' ? '다크 모드' : '화이트 모드'}</button>
@@ -186,7 +187,7 @@ function dashboard() {
     <div class="dashboard-shell">
       <aside class="sidebar glass">
         <div class="profile-mini">
-          <div class="avatar">${state.profile?.avatar ? `<img src="${esc(state.profile.avatar)}" alt="" />` : 'N'}</div>
+          <div class="avatar"><img src="${state.profile?.avatar ? esc(state.profile.avatar) : NATSUMI_PROFILE_IMAGE}" alt="" /></div>
           <div><b>${state.profile ? esc(state.profile.username) : '나츠미 관리자'}</b><small>${state.loggedIn ? 'Discord 로그인됨' : '미리보기 모드'}</small></div>
         </div>
         <label class="select-label">서버 선택</label>
