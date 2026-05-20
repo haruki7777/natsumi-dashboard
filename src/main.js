@@ -84,6 +84,8 @@ const state = {
   activeTab: 'overview',
   busy: false,
   notice: '',
+  isOwner: false,
+  announcements: [],
 };
 
 const localKey = (guildId) => `natsumi-dashboard-settings-${guildId}`;
@@ -225,10 +227,39 @@ function renderPanel() {
   return renderOverview();
 }
 
+function renderDeveloperAnnouncements() {
+  const rows = state.announcements || [];
+  return `
+    <section class="support-board" id="developer-notice">
+      <div class="section-title">
+        <h3>나츠미 지원 서버</h3>
+        <p>나츠미의 최신 소식과 점검 안내를 한눈에 볼 수 있어요.</p>
+      </div>
+      ${state.isOwner ? `
+        <div class="notice-compose">
+          <label>공지 제목<input id="developerNoticeTitle" value="나츠미 업데이트" /></label>
+          <label>공지 내용<textarea id="developerNoticeMessage" placeholder="지원서버에 올릴 공지를 그대로 적어줘."></textarea></label>
+          <button class="primary-btn" data-action="send-developer-notice" type="button">지원서버 공지 올리기</button>
+        </div>
+      ` : ''}
+      <div class="notice-feed">
+        ${rows.map((row) => `
+          <article class="support-notice-card">
+            <h4>📢 ${esc(row.title || '나츠미 지원서버 공지')}</h4>
+            <p>${esc(row.message || '')}</p>
+            <small>🕒 ${row.createdAt ? new Date(row.createdAt).toLocaleString('ko-KR') : '최근 공지'}</small>
+          </article>
+        `).join('') || '<article class="support-notice-card"><h4>📢 공지사항</h4><p>아직 등록된 지원서버 공지가 없어요.</p></article>'}
+      </div>
+    </section>
+  `;
+}
+
 function renderOverview() {
   const guild = currentGuild();
   const featureEntries = Object.entries(state.settings.features || {});
   return `
+    ${renderDeveloperAnnouncements()}
     <section class="section-title">
       <h3>한눈에 보기</h3>
       <p>나츠미가 들어가 있는 서버와 현재 켜진 기능을 빠르게 확인해요.</p>
@@ -453,9 +484,11 @@ async function loadSession() {
     const data = await api('/api/dashboard/session');
     state.loggedIn = Boolean(data.user);
     state.profile = data.user || null;
+    state.isOwner = Boolean(data.isOwner);
   } catch {
     state.loggedIn = false;
     state.profile = null;
+    state.isOwner = false;
   }
 }
 
@@ -478,6 +511,34 @@ async function loadSettings() {
   } catch {
     const saved = localStorage.getItem(localKey(guild.id));
     state.settings = saved ? { ...structuredClone(defaultSettings), ...JSON.parse(saved) } : structuredClone(defaultSettings);
+  }
+}
+
+async function loadDeveloperAnnouncements() {
+  try {
+    const data = await api('/api/developer-announcements');
+    state.announcements = data.announcements || [];
+  } catch {
+    state.announcements = [];
+  }
+}
+
+async function sendDeveloperAnnouncement() {
+  const title = formValue('#developerNoticeTitle') || '나츠미 업데이트';
+  const message = formValue('#developerNoticeMessage');
+  if (!message) return toast('공지 내용을 먼저 적어줘.');
+  try {
+    await api('/api/developer-announcements', {
+      method: 'POST',
+      body: JSON.stringify({ title, message }),
+    });
+    const textarea = document.querySelector('#developerNoticeMessage');
+    if (textarea) textarea.value = '';
+    await loadDeveloperAnnouncements();
+    dashboard();
+    toast('지원서버 공지를 올렸어.');
+  } catch {
+    toast('개발자 공지를 올리지 못했어. 로그인 계정이나 API를 확인해줘.');
   }
 }
 
@@ -558,7 +619,7 @@ function toast(message) {
 }
 
 function login() {
-  const returnTo = encodeURIComponent(window.location.href);
+  const returnTo = encodeURIComponent(DASHBOARD_URL);
   window.location.href = `${API_BASE}/auth/discord?returnTo=${returnTo}`;
 }
 
@@ -616,6 +677,7 @@ app.addEventListener('click', async (event) => {
   if (target.dataset.action === 'save-emoji') return saveSettings('emoji');
   if (target.dataset.action === 'send-question') return sendQuestion();
   if (target.dataset.action === 'load-qna') return loadQuestions();
+  if (target.dataset.action === 'send-developer-notice') return sendDeveloperAnnouncement();
 });
 
 app.addEventListener('change', async (event) => {
@@ -631,5 +693,9 @@ applyTheme();
 await loadSession();
 await loadGuilds();
 await loadSettings();
+await loadDeveloperAnnouncements();
 if (state.loggedIn || state.guilds.length) dashboard();
 else intro();
+if (new URLSearchParams(window.location.search).get('panel') === 'developer-notice') {
+  setTimeout(() => document.querySelector('#developer-notice')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
