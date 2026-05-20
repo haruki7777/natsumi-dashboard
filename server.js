@@ -66,7 +66,11 @@ const DeveloperAnnouncement = model('DeveloperAnnouncement', new Schema({
   authorId: String,
   authorName: String,
   title: String,
+  subtitle: String,
   message: String,
+  imageUrl: String,
+  mentionMode: String,
+  mentionTarget: String,
   channelId: String,
   status: { type: String, default: 'stored' },
   webhookId: String,
@@ -273,12 +277,15 @@ app.get('/api/developer-announcements', async (_req, res) => {
   res.json({ announcements: rows.map((row) => ({
     id: row._id,
     title: row.title,
+    subtitle: row.subtitle,
     message: row.message,
+    imageUrl: row.imageUrl,
     status: row.status,
     createdAt: row.createdAt,
   })) });
 });
 app.post('/api/developer-announcements', requireLogin, requireOwner, async (req, res) => {
+  return res.status(410).json({ error: 'Developer notices are posted from the Discord bot only.' });
   const title = String(req.body?.title || '나츠미 지원서버 공지').trim().slice(0, 120);
   const message = String(req.body?.message || '').trim().slice(0, 1800);
   if (!message) return res.status(400).json({ error: '공지 내용이 비어 있어.' });
