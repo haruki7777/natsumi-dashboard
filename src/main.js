@@ -2,12 +2,50 @@ import './style.css';
 
 const DASHBOARD_SERVER_URL = 'http://natsumidashboard.kro.kr:25901';
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || (location.hostname === 'localhost' ? window.location.origin : DASHBOARD_SERVER_URL)).replace(/\/$/, '');
-const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || `${API_BASE}/`;
 const NATSUMI_PROFILE_IMAGE = '/natsumi-profile-03.jpg';
 const themeKey = 'natsumi-dashboard-theme';
 const selectedGuildKey = 'natsumi-dashboard-selected-guild';
-
 const app = document.getElementById('app');
+
+const adminHiddenCommands = new Set(['개발자공지', '개발자답변', '명령어리로드', 'natsufix']);
+const commandList = [
+  ['도움말', '기본 도움말과 링크를 보여줘요.', 'general'],
+  ['핑', '봇 지연시간을 확인해요.', 'general'],
+  ['진단', '봇 상태와 런타임 상태를 확인해요.', 'general'],
+  ['랭크', '레벨과 랭크카드를 보여줘요.', 'general'],
+  ['랭킹', '레벨 순위를 확인해요.', 'general'],
+  ['유저정보', '유저 정보와 배너를 확인해요.', 'general'],
+  ['서버정보', '서버 정보를 확인해요.', 'general'],
+  ['웹상점', '웹상점 링크를 열어요.', 'general'],
+  ['나츠미서버설정', '나츠미 전용 채널을 구성해요.', 'general', true],
+  ['투표', '간단한 투표를 만들어요.', 'general'],
+  ['문의', '개발자에게 문의를 보내요.', 'util'],
+  ['이모지스틸', '이모지를 서버에 가져와요.', 'util'],
+  ['배너', '유저 배너를 확인해요.', 'util'],
+  ['개인음성채널', '개인 음성방을 설정해요.', 'util'],
+  ['tts설정', 'TTS 설정 명령어예요. 대시보드 관리 권장.', 'util'],
+  ['밴', '멤버를 차단해요.', 'mod'],
+  ['킥', '멤버를 추방해요.', 'mod'],
+  ['타임아웃', '멤버에게 타임아웃을 걸어요.', 'mod'],
+  ['청소', '메시지를 정리해요.', 'mod'],
+  ['공지', '서버 공지를 보냅니다.', 'mod'],
+  ['금지어', '금지어를 관리해요.', 'mod'],
+  ['경고', '경고를 추가, 차감, 조회해요.', 'mod'],
+  ['경고설정', '경고 로그와 자동 추방을 설정해요.', 'mod'],
+  ['티켓설정', '티켓 시스템을 설정해요.', 'ticket', true],
+  ['sfw', '안전한 이미지 메뉴를 열어요.', 'image', true],
+  ['애니짤', '애니 이미지 메뉴를 열어요.', 'image', true],
+  ['nsfw', 'NSFW 이미지 메뉴를 열어요.', 'image', true],
+  ['nsfw2', 'NSFW 이미지 메뉴 2를 열어요.', 'image', true],
+  ['nsfw3', 'NSFW 이미지 메뉴 3을 열어요.', 'image', true],
+  ['ai채팅', 'AI 채팅 기능을 사용해요.', 'ai'],
+  ['애니굿즈뽑기', '애니 굿즈 뽑기를 해요.', 'game'],
+  ['도감', '수집 도감을 확인해요.', 'game'],
+  ['두더지', '두더지 속도전을 플레이해요.', 'game'],
+  ['낚시', '낚시 게임을 플레이해요.', 'game'],
+  ['슬롯', '슬롯 게임을 플레이해요.', 'game'],
+  ['인벤토리', '가방을 확인해요.', 'game'],
+].filter(([name]) => !adminHiddenCommands.has(name)).map(([name, description, group, heart]) => ({ name, description, group, heart }));
 
 const welcomeVariables = [
   '{user}', '{user.name}', '{user.tag}', '{user.id}', '{user.mention}',
@@ -29,17 +67,17 @@ const sampleTemplates = [
   ['입장 회수', '{user.name} 님의 입장 카드는 퇴장하면 자동 정리돼요.'],
 ];
 
-const commandList = [
-  { name: '랭크', description: '레벨과 랭크카드를 보여줘요.' },
-  { name: '유저정보', description: '유저 정보와 배너를 확인해요.' },
-  { name: 'sfw', description: '안전한 이미지 메뉴를 열어요.', heart: true },
-  { name: '애니짤', description: '애니 이미지 메뉴를 열어요.', heart: true },
-  { name: 'nsfw', description: 'NSFW 이미지 메뉴를 열어요.', heart: true },
-  { name: '나츠미서버설정', description: '서버 전용 채널을 구성해요.', heart: true },
-  { name: '청소', description: '메시지를 정리해요.' },
-  { name: '킥', description: '멤버를 추방해요.' },
-  { name: '밴', description: '멤버를 차단해요.' },
-  { name: '타임아웃', description: '멤버를 시간 제한해요.' },
+const voiceList = [
+  ['ko_warm_female', '한국어 여성 - 따뜻한 안내'],
+  ['ko_clear_female', '한국어 여성 - 또렷한 진행'],
+  ['ko_soft_female', '한국어 여성 - 부드러운 애니톤'],
+  ['ko_bright_female', '한국어 여성 - 밝은 방송톤'],
+  ['ko_calm_male', '한국어 남성 - 차분한 안내'],
+  ['ja_soft_female', '일본어 여성 - 부드러운 애니톤'],
+  ['ja_bright_female', '일본어 여성 - 밝은 캐릭터톤'],
+  ['ja_calm_female', '일본어 여성 - 차분한 내레이션'],
+  ['ja_clear_male', '일본어 남성 - 또렷한 진행'],
+  ['default_natsumi', '기본 보이스 - 나츠미'],
 ];
 
 const fallbackGuilds = [{
@@ -58,35 +96,14 @@ const fallbackGuilds = [{
 
 const defaultSettings = {
   disabledCommands: [],
-  features: { welcome: false, notice: true, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false },
-  welcome: {
-    enabled: false,
-    channelId: '',
-    leaveChannelId: '',
-    cleanupOnLeave: true,
-    message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해.',
-    aiPrompt: '',
-  },
-  notice: { enabled: true, channelId: '', message: '' },
+  features: { welcome: false, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false },
+  welcome: { enabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해.', aiPrompt: '' },
   tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'ko_warm_female' },
   emojiUpscale: { enabled: false, channelId: '', webhookName: 'Natsumi Emoji Upscaler' },
 };
 
-const voiceList = [
-  ['ko_warm_female', '한국어 여성 - 따뜻한 안내'],
-  ['ko_clear_female', '한국어 여성 - 또렷한 진행'],
-  ['ko_soft_female', '한국어 여성 - 부드러운 애니톤'],
-  ['ko_bright_female', '한국어 여성 - 밝은 방송톤'],
-  ['ko_calm_male', '한국어 남성 - 차분한 안내'],
-  ['ja_soft_female', '일본어 여성 - 부드러운 애니톤'],
-  ['ja_bright_female', '일본어 여성 - 밝은 캐릭터톤'],
-  ['ja_calm_female', '일본어 여성 - 차분한 내레이션'],
-  ['ja_clear_male', '일본어 남성 - 또렷한 진행'],
-  ['default_natsumi', '기본 보이스 - 나츠미'],
-];
-
 const state = {
-  theme: localStorage.getItem(themeKey) || 'dark',
+  theme: localStorage.getItem(themeKey) || 'light',
   loggedIn: false,
   profile: null,
   guilds: [],
@@ -95,15 +112,11 @@ const state = {
   activeTab: 'overview',
   isOwner: false,
   announcements: [],
+  botStatus: null,
 };
 
 function esc(value = '') {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 async function api(path, options = {}) {
@@ -138,8 +151,15 @@ function localKey(guildId) {
   return `natsumi-dashboard-settings-${guildId}`;
 }
 
+function avatarUrl() {
+  if (!state.profile) return NATSUMI_PROFILE_IMAGE;
+  if (state.profile.avatar?.startsWith?.('http')) return state.profile.avatar;
+  if (state.profile.avatar && state.profile.id) return `https://cdn.discordapp.com/avatars/${state.profile.id}/${state.profile.avatar}.png?size=128`;
+  return NATSUMI_PROFILE_IMAGE;
+}
+
 function shell(content) {
-  const loginLabel = state.loggedIn ? esc(state.profile?.username || '로그인됨') : '개발자 로그인';
+  const profileName = state.profile?.globalName || state.profile?.username || '관리자';
   return `
     <div class="page-shell">
       <header class="topbar glass">
@@ -147,15 +167,19 @@ function shell(content) {
           <span><img src="${NATSUMI_PROFILE_IMAGE}" alt="" /></span><b>NATSUMI</b>
         </button>
         <div class="top-actions">
-          <a class="ghost-link" href="${DASHBOARD_URL}" target="_blank" rel="noreferrer">대시보드 링크</a>
-          <button class="ghost-btn" data-action="theme" type="button">${state.theme === 'light' ? '다크 모드' : '화이트 모드'}</button>
-          ${state.loggedIn ? `<span class="login-pill">${loginLabel}</span>` : `<button class="primary-btn" data-action="login" type="button">${loginLabel}</button>`}
+          <label class="mode-toggle" title="Theme">
+            <input type="checkbox" data-action="theme-toggle" ${state.theme === 'dark' ? 'checked' : ''}>
+            <span></span>
+          </label>
+          ${state.loggedIn
+            ? `<div class="login-pill"><img src="${esc(avatarUrl())}" alt="" /><b>${esc(profileName)}</b></div>`
+            : `<button class="primary-btn" data-action="login" type="button">Discord Login</button>`}
         </div>
       </header>
       ${content}
       <footer class="footer glass">
-        <b>나츠미 대시보드</b>
-        <small>공지사항은 누구나 볼 수 있고, 작성과 설정은 개발자만 사용할 수 있어요.</small>
+        <b>나츠미 관리자 모드</b>
+        <small>공지사항은 공개로 보이고, 설정은 지정된 개발자만 사용할 수 있어요.</small>
       </footer>
     </div>
   `;
@@ -163,17 +187,17 @@ function shell(content) {
 
 function publicNoticePage() {
   app.innerHTML = shell(`
-    <section class="hero-panel glass notice-only">
-      <p class="eyebrow">Natsumi Notice Only</p>
+    <main class="hero-panel glass">
+      <p class="eyebrow">Natsumi Notice</p>
       <h1>나츠미 지원 서버</h1>
-      <p class="hero-desc">나츠미의 최신 소식과 점검 안내를 한눈에 볼 수 있어요. 서버 설정과 공지 작성은 개발자만 사용할 수 있어요.</p>
+      <p class="hero-desc">나츠미의 최신 공지와 점검 안내를 확인할 수 있어요.</p>
       <div class="hero-actions">
-        <button class="soft-btn" data-action="refresh-public" type="button">새로고침</button>
-        ${state.loggedIn && !state.isOwner ? '<span class="login-pill">개발자 전용 대시보드입니다</span>' : ''}
-        ${state.isOwner ? '<button class="primary-btn" data-action="owner-dashboard" type="button">개발자 대시보드 열기</button>' : ''}
+        <button class="soft-btn" data-action="refresh-public" type="button">Refresh</button>
+        ${state.loggedIn && !state.isOwner ? '<span class="login-pill text-only">개발자 전용 대시보드입니다</span>' : ''}
+        ${state.isOwner ? '<button class="primary-btn" data-action="owner-dashboard" type="button">관리자 모드</button>' : ''}
       </div>
       ${renderDeveloperAnnouncements()}
-    </section>
+    </main>
   `);
 }
 
@@ -183,30 +207,28 @@ function dashboard() {
   app.innerHTML = shell(`
     <div class="dashboard-shell">
       <aside class="sidebar glass">
-        <div class="profile-mini">
-          <div class="avatar"><img src="${state.profile?.avatar ? esc(state.profile.avatar) : NATSUMI_PROFILE_IMAGE}" alt="" /></div>
-          <div><b>${state.profile ? esc(state.profile.username) : '나츠미 관리자'}</b><small>개발자 모드</small></div>
+        <div class="profile-card">
+          <div class="avatar big"><img src="${esc(avatarUrl())}" alt="" /></div>
+          <div><b>${esc(state.profile?.globalName || state.profile?.username || 'yukiha_haruki')}</b><small>관리자 모드</small></div>
         </div>
         <label class="select-label">서버 선택</label>
         <select class="wide-select" id="guildSelect">${state.guilds.map((g) => `<option value="${esc(g.id)}" ${g.id === guild.id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
-        ${[
-          ['overview', '한눈에 보기'],
-          ['settings', '설정'],
-          ['welcome', '환영인사'],
-          ['notice', '공지 보내기'],
-          ['commands', '명령어 켜고 끄기'],
-          ['tts', 'TTS 관리'],
-          ['emoji', '이모지 업스케일'],
-          ['qna', '질문답변'],
-        ].map(([tab, label]) => `<button class="nav ${state.activeTab === tab ? 'active' : ''}" data-tab="${tab}" type="button">${label}</button>`).join('')}
+        <div class="menu-list">
+          ${[
+            ['overview', '한눈에 보기'],
+            ['settings', '설정'],
+            ['welcome', '환영인사'],
+            ['commands', '명령어 켜고 끄기'],
+            ['tts', 'TTS 관리'],
+            ['emoji', '이모지 업스케일'],
+            ['qna', '질문답변'],
+          ].map(([tab, label]) => `<button class="menu-tile ${state.activeTab === tab ? 'active' : ''}" data-tab="${tab}" type="button">${label}</button>`).join('')}
+        </div>
       </aside>
       <main class="main glass">
         <header class="main-head">
-          <div>
-            <p class="eyebrow">선택한 서버</p>
-            <h2>${esc(guild.name)}</h2>
-          </div>
-          <button class="soft-btn" data-action="refresh" type="button">새로고침</button>
+          <div><p class="eyebrow">Selected Server</p><h2>${esc(guild.name)}</h2></div>
+          <button class="soft-btn" data-action="refresh" type="button">Refresh</button>
         </header>
         <div id="panel">${renderPanel()}</div>
       </main>
@@ -217,7 +239,6 @@ function dashboard() {
 function renderPanel() {
   if (state.activeTab === 'settings') return renderSettings();
   if (state.activeTab === 'welcome') return renderWelcome();
-  if (state.activeTab === 'notice') return renderNotice();
   if (state.activeTab === 'commands') return renderCommands();
   if (state.activeTab === 'tts') return renderTts();
   if (state.activeTab === 'emoji') return renderEmoji();
@@ -229,10 +250,7 @@ function renderDeveloperAnnouncements() {
   const rows = state.announcements || [];
   return `
     <section class="support-board" id="developer-notice">
-      <div class="section-title">
-        <h3>나츠미 지원 서버</h3>
-        <p>개발자가 고정한 공지사항만 표시돼요.</p>
-      </div>
+      <div class="section-title"><h3>📢 공지사항</h3><p>봇의 개발자 공지 명령어로 올라온 소식이에요.</p></div>
       <div class="notice-feed">
         ${rows.map((row) => `
           <article class="support-notice-card">
@@ -250,20 +268,20 @@ function renderDeveloperAnnouncements() {
 
 function renderOverview() {
   const guild = currentGuild();
-  const featureEntries = Object.entries(state.settings.features || {});
+  const status = state.botStatus || {};
+  const featureEntries = Object.entries(state.settings.features || {}).filter(([key]) => key !== 'notice');
   return `
     ${renderDeveloperAnnouncements()}
-    <section class="section-title">
-      <h3>한눈에 보기</h3>
-      <p>선택한 서버와 켜진 기능을 빠르게 확인해요.</p>
-    </section>
+    <section class="section-title"><h3>한눈에 보기</h3><p>공지, API 연결, 봇 서버 상태를 한 화면에서 확인해요.</p></section>
     <div class="stat-row">
+      <article><span>API</span><b>${status.apiOk === false ? '주의' : '정상'}</b></article>
+      <article><span>나츠미가 지키는 서버</span><b>${status.guildCount ?? guild.botGuildCount ?? state.guilds.length}</b></article>
       <article><span>관리 가능한 서버</span><b>${state.guilds.length}</b></article>
-      <article><span>채널 수</span><b>${channels().length}</b></article>
+      <article><span>채널</span><b>${channels().length}</b></article>
       <article><span>꺼진 명령어</span><b>${state.settings.disabledCommands?.length || 0}</b></article>
     </div>
     <div class="server-grid">
-      <article class="server-card static-card"><div class="server-icon">N</div><div><b>${esc(guild.name)}</b><small>${guild.manageable === false ? '권한 확인 필요' : '관리 가능'}</small></div></article>
+      <article class="server-card static-card"><div class="server-icon">${guild.icon ? `<img src="${esc(guild.icon)}" alt="" />` : 'N'}</div><div><b>${esc(guild.name)}</b><small>${guild.manageable === false ? '권한 확인 필요' : '관리 가능'}</small></div></article>
       ${featureEntries.map(([key, value]) => `<article class="mini-card"><span>${featureName(key)}</span><b>${value ? '켜짐' : '꺼짐'}</b></article>`).join('')}
     </div>
   `;
@@ -274,7 +292,7 @@ function renderSettings() {
   return `
     <section class="section-title"><h3>설정</h3><p>서버 기능을 전체적으로 켜고 꺼요.</p></section>
     <div class="command-list">
-      ${Object.entries(features).map(([key, value]) => `
+      ${Object.entries(features).filter(([key]) => key !== 'notice').map(([key, value]) => `
         <article class="command-card">
           <div><h4>${featureName(key)}</h4><p>${featureDesc(key)}</p></div>
           <label class="switch"><input type="checkbox" data-feature="${key}" ${value ? 'checked' : ''}><span></span></label>
@@ -309,30 +327,14 @@ function renderWelcome() {
   `;
 }
 
-function renderNotice() {
-  const notice = state.settings.notice || defaultSettings.notice;
-  return `
-    <section class="section-title"><h3>공지 보내기</h3><p>대시보드에서 작성한 공지를 선택한 채널로 전송해요.</p></section>
-    <div class="form-grid">
-      <label class="check-line"><input type="checkbox" id="noticeEnabled" ${notice.enabled !== false ? 'checked' : ''}> 공지 기능 켜기</label>
-      <label>공지 채널<select id="noticeChannel">${optionList('text', notice.channelId)}</select></label>
-      <label>공지 내용<textarea id="noticeMessage" placeholder="공지 내용을 적어줘.">${esc(notice.message || '')}</textarea></label>
-    </div>
-    <div class="form-actions">
-      <button class="soft-btn" data-action="save-notice" type="button">설정 저장</button>
-      <button class="primary-btn" data-action="send-notice" type="button">공지 전송</button>
-    </div>
-  `;
-}
-
 function renderCommands() {
   const disabled = new Set(state.settings.disabledCommands || []);
   return `
-    <section class="section-title"><h3>명령어 켜고 끄기</h3><p>끄면 해당 서버에서 봇이 안내만 하고 실행하지 않도록 저장해요.</p></section>
-    <div class="command-list">
+    <section class="section-title"><h3>명령어 켜고 끄기</h3><p>관리자/오너 전용 명령어는 제외하고, 서버에서 쓸 일반 기능 명령어를 켜고 꺼요.</p></section>
+    <div class="command-list dense">
       ${commandList.map((cmd) => {
         const enabled = !disabled.has(cmd.name);
-        return `<article class="command-card"><div><h4>/${esc(cmd.name)}</h4><p>${esc(cmd.description)}</p>${cmd.heart ? '<span class="heart-chip">프리미엄 하트</span>' : ''}</div><label class="switch"><input type="checkbox" data-command="${esc(cmd.name)}" ${enabled ? 'checked' : ''}><span></span></label></article>`;
+        return `<article class="command-card"><div><h4>/${esc(cmd.name)}</h4><p>${esc(cmd.description)}</p><small>${esc(cmd.group)}${cmd.heart ? ' · 프리미엄 하트' : ''}</small></div><label class="switch"><input type="checkbox" data-command="${esc(cmd.name)}" ${enabled ? 'checked' : ''}><span></span></label></article>`;
       }).join('')}
     </div>
     <div class="form-actions"><button class="primary-btn" data-action="save-commands" type="button">명령어 설정 저장</button></div>
@@ -342,7 +344,7 @@ function renderCommands() {
 function renderTts() {
   const tts = state.settings.tts || defaultSettings.tts;
   return `
-    <section class="section-title"><h3>TTS 관리</h3><p>봇 명령어 대신 대시보드에서 카테고리, 전용 채팅방, 음성방, 목소리를 관리해요.</p></section>
+    <section class="section-title"><h3>TTS 관리</h3><p>대시보드에서 카테고리, 전용 채팅방, 음성방, 목소리를 관리해요.</p></section>
     <div class="form-grid">
       <label class="check-line"><input type="checkbox" id="ttsEnabled" ${tts.enabled ? 'checked' : ''}> TTS 켜기</label>
       <label>TTS 카테고리<select id="ttsCategory">${optionList('category', tts.categoryId)}</select></label>
@@ -357,10 +359,10 @@ function renderTts() {
 function renderEmoji() {
   const emoji = state.settings.emojiUpscale || defaultSettings.emojiUpscale;
   return `
-    <section class="section-title"><h3>이모지 업스케일</h3><p>기본은 항상 꺼짐이에요. 관리자가 켠 채널에서만 이미지와 이모지를 처리해요.</p></section>
+    <section class="section-title"><h3>이모지 업스케일</h3><p>반응 채널을 비워두면 모든 채널에서 이모지를 확장해요. 특정 채널에만 쓰고 싶을 때만 채널을 선택하세요.</p></section>
     <div class="form-grid">
       <label class="check-line"><input type="checkbox" id="emojiEnabled" ${emoji.enabled ? 'checked' : ''}> 이모지 업스케일 켜기</label>
-      <label>반응 채널<select id="emojiChannel">${optionList('text', emoji.channelId)}</select></label>
+      <label>반응 채널<select id="emojiChannel">${optionList('text', emoji.channelId, '모든 채널에서 자동 반응')}</select></label>
       <label>웹훅 표시 이름<input id="emojiWebhookName" value="${esc(emoji.webhookName || 'Natsumi Emoji Upscaler')}" /></label>
     </div>
     <div class="form-actions"><button class="primary-btn" data-action="save-emoji" type="button">이모지 설정 저장</button></div>
@@ -380,34 +382,24 @@ function renderQna() {
 }
 
 function featureName(key) {
-  return ({
-    level: '레벨/랭크',
-    welcome: '환영인사',
-    notice: '공지',
-    ticket: '티켓',
-    tts: 'TTS',
-    ai: 'AI',
-    shop: '웹상점',
-    emojiUpscale: '이모지 업스케일',
-  })[key] || key;
+  return ({ level: '레벨/랭크', welcome: '환영인사', ticket: '티켓', tts: 'TTS', ai: 'AI', shop: '웹상점', emojiUpscale: '이모지 업스케일' })[key] || key;
 }
 
 function featureDesc(key) {
   return ({
     level: '랭크카드와 경험치 표시를 제어해요.',
     welcome: '입장과 퇴장 카드를 제어해요.',
-    notice: '공지 전송 기능을 제어해요.',
     ticket: '티켓 설정 기능을 제어해요.',
     tts: '채팅을 음성으로 읽는 기능을 제어해요.',
     ai: 'AI 채팅과 그림 기능을 제어해요.',
     shop: '웹상점과 후원 보상 기능을 제어해요.',
-    emojiUpscale: '이모지 업스케일 자동 반응을 제어해요.',
+    emojiUpscale: '웹훅 이모지 확대 기능을 제어해요.',
   })[key] || '서버 기능을 제어해요.';
 }
 
-function optionList(type, selected = '') {
+function optionList(type, selected = '', emptyLabel = null) {
   const typed = channels().filter((channel) => channel.type === type);
-  const label = type === 'voice' ? '음성 채널 선택' : type === 'category' ? '카테고리 선택' : '채팅 채널 선택';
+  const label = emptyLabel || (type === 'voice' ? '음성 채널 선택' : type === 'category' ? '카테고리 선택' : '채팅 채널 선택');
   return `<option value="">${label}</option>${typed.map((channel) => `<option value="${esc(channel.id)}" ${channel.id === selected ? 'selected' : ''}># ${esc(channel.name)}</option>`).join('')}`;
 }
 
@@ -468,44 +460,57 @@ async function loadDeveloperAnnouncements() {
   }
 }
 
+async function loadBotStatus() {
+  try {
+    state.botStatus = await api('/api/bot-status');
+  } catch {
+    state.botStatus = { apiOk: false };
+  }
+}
+
 function formValue(selector) {
   return document.querySelector(selector)?.value?.trim() || '';
 }
 
 function collectSettingsFromDom() {
-  const disabledCommands = [...document.querySelectorAll('[data-command]')]
-    .filter((input) => !input.checked)
-    .map((input) => input.dataset.command);
-  return {
-    ...state.settings,
-    disabledCommands,
-    features: Object.fromEntries([...document.querySelectorAll('[data-feature]')].map((input) => [input.dataset.feature, input.checked])),
-    welcome: {
+  const next = structuredClone(state.settings);
+
+  if (state.activeTab === 'settings') {
+    next.features = { ...next.features, ...Object.fromEntries([...document.querySelectorAll('[data-feature]')].map((input) => [input.dataset.feature, input.checked])) };
+  }
+  if (state.activeTab === 'commands') {
+    next.disabledCommands = [...document.querySelectorAll('[data-command]')].filter((input) => !input.checked).map((input) => input.dataset.command);
+  }
+  if (state.activeTab === 'welcome') {
+    next.welcome = {
+      ...next.welcome,
       enabled: document.querySelector('#welcomeEnabled')?.checked || false,
       cleanupOnLeave: document.querySelector('#cleanupOnLeave')?.checked !== false,
       channelId: formValue('#welcomeChannel'),
       leaveChannelId: formValue('#leaveChannel'),
       aiPrompt: formValue('#aiPrompt'),
       message: formValue('#welcomeMessage'),
-    },
-    notice: {
-      enabled: document.querySelector('#noticeEnabled')?.checked !== false,
-      channelId: formValue('#noticeChannel'),
-      message: formValue('#noticeMessage'),
-    },
-    tts: {
+    };
+  }
+  if (state.activeTab === 'tts') {
+    next.tts = {
+      ...next.tts,
       enabled: document.querySelector('#ttsEnabled')?.checked || false,
       categoryId: formValue('#ttsCategory'),
       textChannelId: formValue('#ttsText'),
       voiceChannelId: formValue('#ttsVoiceChannel'),
       voice: formValue('#ttsVoice') || 'ko_warm_female',
-    },
-    emojiUpscale: {
+    };
+  }
+  if (state.activeTab === 'emoji') {
+    next.emojiUpscale = {
+      ...next.emojiUpscale,
       enabled: document.querySelector('#emojiEnabled')?.checked || false,
       channelId: formValue('#emojiChannel'),
       webhookName: formValue('#emojiWebhookName') || 'Natsumi Emoji Upscaler',
-    },
-  };
+    };
+  }
+  return next;
 }
 
 async function saveSettings() {
@@ -529,16 +534,6 @@ async function sendWelcomeTest() {
     toast('테스트 환영 메시지를 보냈어.');
   } catch {
     toast('테스트 API를 확인해야 해. 설정 저장은 완료했어.');
-  }
-}
-
-async function sendNotice() {
-  await saveSettings();
-  try {
-    await api(`/api/dashboard/guilds/${currentGuild().id}/notice`, { method: 'POST', body: JSON.stringify({ notice: state.settings.notice }) });
-    toast('공지 전송 요청을 보냈어.');
-  } catch {
-    toast('공지 API를 확인해야 해. 설정 저장은 완료했어.');
   }
 }
 
@@ -583,21 +578,15 @@ app.addEventListener('click', async (event) => {
   if (!target) return;
 
   if (target.dataset.action === 'home') return state.isOwner ? dashboard() : publicNoticePage();
-  if (target.dataset.action === 'theme') {
-    applyTheme(state.theme === 'light' ? 'dark' : 'light');
-    return state.isOwner ? dashboard() : publicNoticePage();
-  }
   if (target.dataset.action === 'login') return login();
   if (target.dataset.action === 'refresh-public') {
-    await loadSession();
-    await loadDeveloperAnnouncements();
+    await Promise.all([loadSession(), loadDeveloperAnnouncements(), loadBotStatus()]);
     return state.isOwner ? dashboard() : publicNoticePage();
   }
   if (target.dataset.action === 'owner-dashboard') return state.isOwner ? dashboard() : publicNoticePage();
   if (!state.isOwner) return publicNoticePage();
-
   if (target.dataset.action === 'refresh') {
-    await Promise.all([loadSession(), loadGuilds()]);
+    await Promise.all([loadSession(), loadGuilds(), loadDeveloperAnnouncements(), loadBotStatus()]);
     await loadSettings();
     return dashboard();
   }
@@ -623,19 +612,17 @@ app.addEventListener('click', async (event) => {
     if (prompt) prompt.value = '';
     toast('템플릿과 작성 내용을 비웠어.');
   }
-  if (target.dataset.action === 'save-settings') return saveSettings();
-  if (target.dataset.action === 'save-welcome') return saveSettings();
+  if (target.dataset.action?.startsWith('save-')) return saveSettings();
   if (target.dataset.action === 'test-welcome') return sendWelcomeTest();
-  if (target.dataset.action === 'save-notice') return saveSettings();
-  if (target.dataset.action === 'send-notice') return sendNotice();
-  if (target.dataset.action === 'save-commands') return saveSettings();
-  if (target.dataset.action === 'save-tts') return saveSettings();
-  if (target.dataset.action === 'save-emoji') return saveSettings();
   if (target.dataset.action === 'send-question') return sendQuestion();
   if (target.dataset.action === 'load-qna') return loadQuestions();
 });
 
 app.addEventListener('change', async (event) => {
+  if (event.target.matches('[data-action="theme-toggle"]')) {
+    applyTheme(event.target.checked ? 'dark' : 'light');
+    return state.isOwner ? dashboard() : publicNoticePage();
+  }
   if (event.target.id === 'guildSelect' && state.isOwner) {
     state.selectedGuild = state.guilds.find((guild) => guild.id === event.target.value) || state.guilds[0];
     localStorage.setItem(selectedGuildKey, state.selectedGuild.id);
@@ -645,16 +632,11 @@ app.addEventListener('change', async (event) => {
 });
 
 applyTheme();
-await loadSession();
-await loadDeveloperAnnouncements();
+await Promise.all([loadSession(), loadDeveloperAnnouncements(), loadBotStatus()]);
 if (state.isOwner) {
   await loadGuilds();
   await loadSettings();
   dashboard();
 } else {
   publicNoticePage();
-}
-
-if (new URLSearchParams(window.location.search).get('panel') === 'developer-notice') {
-  setTimeout(() => document.querySelector('#developer-notice')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
 }

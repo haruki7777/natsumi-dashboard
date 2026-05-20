@@ -11,3 +11,24 @@ button,input,textarea,select{font:inherit}button,select{cursor:pointer}a{color:i
 .form-grid{display:grid;gap:14px;margin-top:18px}label{font-weight:900}.check-line{display:flex;gap:10px;align-items:center}.check-line input{width:auto}textarea{min-height:120px;resize:vertical}.tool-card{margin-top:16px}.chip-grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-top:12px}.chip,.template-card{border:1px solid var(--line);border-radius:12px;background:var(--soft);color:var(--text);padding:10px 12px;text-align:left;font-weight:900}.template-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:12px}.template-card small{display:block;margin-top:8px}.form-actions{justify-content:flex-end;margin-top:16px}.footer{padding:18px}.toast{position:fixed;right:22px;bottom:22px;z-index:20;max-width:min(420px,calc(100vw - 44px));border-radius:14px;background:linear-gradient(135deg,var(--pink),var(--orange));color:#fff;padding:14px 16px;font-weight:900;box-shadow:0 16px 38px rgba(0,0,0,.28)}
 .support-board{margin:0 0 22px;padding:22px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(135deg,rgba(255,79,163,.12),rgba(255,155,67,.1));box-shadow:0 16px 42px rgba(0,0,0,.16)}.notice-feed{display:grid;gap:12px;margin-top:16px}.support-notice-card{border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.06);padding:18px}.support-notice-card h4{margin:0 0 10px;font-size:25px}.support-notice-card b{display:block;margin:0 0 10px;color:var(--accent);font-size:18px}.support-notice-card p{margin:0 0 14px;color:var(--text);font-size:20px;line-height:1.6;white-space:pre-wrap}.support-notice-card small{font-weight:900}.notice-image{display:block;width:100%;max-height:360px;object-fit:cover;border-radius:14px;margin:12px 0;border:1px solid var(--line)}
 @media(max-width:900px){body{background-attachment:scroll}.page-shell{padding:14px}.dashboard-shell{grid-template-columns:1fr}.topbar{align-items:stretch;flex-direction:column}.top-actions>*{flex:1;text-align:center}.main-head,.split-head{align-items:flex-start;flex-direction:column}.hero,.main,.sidebar{padding:20px}.hero h1{font-size:34px}.command-card{align-items:flex-start}.form-actions{justify-content:stretch}.form-actions>*{flex:1}}
+
+.hero-panel{width:100%;max-width:980px;margin:0 auto;padding:46px;border-radius:18px}
+.hero-panel h1{margin:0 0 16px;font-size:clamp(34px,6vw,62px);line-height:1.06}
+.login-pill{display:flex;align-items:center;gap:9px}
+.login-pill img{width:34px;height:34px;border-radius:50%;object-fit:cover}
+.login-pill.text-only{display:inline-flex}
+.mode-toggle{display:inline-grid;place-items:center;width:60px;height:38px;border:1px solid var(--line);border-radius:999px;background:var(--soft);cursor:pointer}
+.mode-toggle input{display:none}
+.mode-toggle span{position:relative;width:42px;height:22px;border-radius:999px;background:rgba(255,255,255,.28)}
+.mode-toggle span::before{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.28);transition:transform .18s ease}
+.mode-toggle input:checked+span{background:linear-gradient(135deg,var(--pink),var(--orange))}
+.mode-toggle input:checked+span::before{transform:translateX(20px)}
+.dashboard-shell{grid-template-columns:320px minmax(0,1fr)}
+.profile-card{display:flex;gap:14px;align-items:center;margin-bottom:18px}
+.profile-card b{display:block;font-size:23px}
+.profile-card small{display:block;margin-top:5px;color:var(--muted);font-size:15px}
+.avatar.big{width:86px;height:86px;flex:0 0 auto}
+.menu-list{display:grid;gap:10px;margin-top:18px}
+.menu-tile{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--soft);color:var(--text);padding:15px 16px;text-align:left;font-weight:900}
+.menu-tile.active{background:linear-gradient(135deg,var(--pink),var(--orange));color:#fff;box-shadow:0 12px 26px rgba(255,79,163,.2)}
+@media(max-width:900px){.hero-panel{padding:20px}.dashboard-shell{grid-template-columns:1fr}.profile-card{align-items:center}.avatar.big{width:72px;height:72px}}

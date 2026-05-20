@@ -270,6 +270,33 @@ app.get('/auth/discord/dashboard', (req, res) => startDiscordAuth(req, res, `${p
 app.get('/auth/discord/dashboard/callback', (req, res) => finishDiscordAuth(req, res, `${publicBaseUrl(req)}/auth/discord/dashboard/callback`));
 app.post('/auth/logout', (req, res) => req.session.destroy(() => res.json({ ok: true })));
 app.get('/api/auth/me', (req, res) => res.json({ user: req.session?.discordUser || null, isOwner: isOwner(req) }));
+app.get('/api/bot-status', async (_req, res) => {
+  let bot = null;
+  let botReady = false;
+  if (DISCORD_BOT_TOKEN) {
+    try {
+      const botRes = await fetch('https://discord.com/api/v10/users/@me', {
+        headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
+      });
+      if (botRes.ok) {
+        bot = await botRes.json();
+        botReady = Boolean(bot?.id);
+      }
+    } catch {
+      botReady = false;
+    }
+  }
+
+  const configuredGuildCount = Number(process.env.BOT_GUILD_COUNT || process.env.NATSUMI_GUILD_COUNT || 0);
+  const guildCount = Number.isFinite(configuredGuildCount) && configuredGuildCount > 0 ? configuredGuildCount : null;
+  res.json({
+    apiOk: true,
+    botReady,
+    botName: bot?.username || 'NATSUMI',
+    guildCount,
+    checkedAt: new Date().toISOString(),
+  });
+});
 
 app.get('/api/dashboard/session', (req, res) => res.json({ user: req.session?.discordUser || null, isOwner: isOwner(req) }));
 app.get('/api/developer-announcements', async (_req, res) => {
