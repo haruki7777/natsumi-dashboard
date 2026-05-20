@@ -16,6 +16,7 @@ const GAME_URL = (process.env.GAME_URL || 'https://natsumi-game.kro.kr/').replac
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.TOKEN || '';
+const BOT_STATUS_URL = process.env.BOT_STATUS_URL || process.env.NATSUMI_BOT_STATUS_URL || process.env.BOT_API_URL || '';
 const OWNER_USER_ID = process.env.OWNER_USER_ID || process.env.NATSUMI_OWNER_ID || '1293232804745838733';
 const DEVELOPER_NOTICE_CHANNEL_ID = process.env.DEVELOPER_NOTICE_CHANNEL_ID || '1371675674393448528';
 const DISCORD_ADMINISTRATOR = 0x8n;
@@ -273,6 +274,9 @@ app.get('/api/auth/me', (req, res) => res.json({ user: req.session?.discordUser 
 app.get('/api/bot-status', async (_req, res) => {
   let bot = null;
   let botReady = false;
+  let botApiOk = false;
+  let botRuntimeStatus = null;
+  let liveGuildCount = null;
   if (DISCORD_BOT_TOKEN) {
     try {
       const botRes = await fetch('https://discord.com/api/v10/users/@me', {
@@ -286,13 +290,33 @@ app.get('/api/bot-status', async (_req, res) => {
       botReady = false;
     }
   }
+  if (BOT_STATUS_URL) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      const statusUrl = BOT_STATUS_URL.endsWith('/api/status') ? BOT_STATUS_URL : `${BOT_STATUS_URL.replace(/\/$/, '')}/api/status`;
+      const statusRes = await fetch(statusUrl, { signal: controller.signal });
+      if (statusRes.ok) {
+        const status = await statusRes.json();
+        botApiOk = true;
+        botRuntimeStatus = status.status || null;
+        liveGuildCount = Number(status.guilds || 0) || null;
+      }
+    } catch {
+      botApiOk = false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   const configuredGuildCount = Number(process.env.BOT_GUILD_COUNT || process.env.NATSUMI_GUILD_COUNT || 0);
-  const guildCount = Number.isFinite(configuredGuildCount) && configuredGuildCount > 0 ? configuredGuildCount : null;
+  const guildCount = liveGuildCount || (Number.isFinite(configuredGuildCount) && configuredGuildCount > 0 ? configuredGuildCount : null);
   res.json({
     apiOk: true,
     botReady,
     botName: bot?.username || 'NATSUMI',
+    botApiOk,
+    botRuntimeStatus,
     guildCount,
     checkedAt: new Date().toISOString(),
   });
