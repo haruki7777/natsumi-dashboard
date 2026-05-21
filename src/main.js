@@ -112,6 +112,16 @@ const state = {
   botStatus: null,
 };
 
+const dashboardTabs = [
+  ['overview', '한눈에 보기'],
+  ['settings', '설정'],
+  ['welcome', '환영인사'],
+  ['commands', '명령어 켜고 끄기'],
+  ['tts', 'TTS 관리'],
+  ['emoji', '이모지 업스케일'],
+  ['qna', '질문답변'],
+];
+
 function esc(value = '') {
   return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
@@ -159,6 +169,7 @@ function shell(content) {
   const profileName = state.profile?.globalName || state.profile?.username || '관리자';
   return `
     <div class="page-shell">
+      ${renderPetals()}
       <header class="topbar glass">
         <button class="brand" data-action="home" type="button">
           <span><img src="${NATSUMI_PROFILE_IMAGE}" alt="" /></span><b>NATSUMI</b>
@@ -179,6 +190,22 @@ function shell(content) {
         <b>나츠미 관리자 모드</b>
         <small>공지사항은 공개로 보이고, 설정은 지정된 개발자만 사용할 수 있어요.</small>
       </footer>
+    </div>
+  `;
+}
+
+function renderPetals() {
+  return `
+    <div class="dashboard-petals" aria-hidden="true">
+      ${Array.from({ length: 14 }, (_, index) => {
+        const x = 3 + ((index * 19) % 94);
+        const drift = index % 2 === 0 ? 36 + index * 7 : -42 - index * 5;
+        const delay = -(index % 9);
+        const duration = 10 + (index % 6);
+        const size = 9 + (index % 5) * 2;
+        const spin = 240 + index * 31;
+        return `<span style="--x:${x}vw;--drift:${drift}px;--delay:${delay}s;--dur:${duration}s;--size:${size}px;--spin:${spin}deg"></span>`;
+      }).join('')}
     </div>
   `;
 }
@@ -227,6 +254,9 @@ function dashboard() {
           <div><p class="eyebrow">Selected Server</p><h2>${esc(guild.name)}</h2></div>
           <button class="soft-btn" data-action="refresh" type="button">새로고침</button>
         </header>
+        <nav class="panel-menu" aria-label="Dashboard sections">
+          ${dashboardTabs.map(([tab, label]) => `<button class="panel-menu-btn ${state.activeTab === tab ? 'active' : ''}" data-tab="${tab}" type="button">${label}</button>`).join('')}
+        </nav>
         <div id="panel">${renderPanel()}</div>
       </main>
     </div>
