@@ -247,7 +247,13 @@ function renderDeveloperAnnouncements() {
   const rows = state.announcements || [];
   return `
     <section class="support-board" id="developer-notice">
-      <div class="section-title"><h3>공지사항</h3><p>봇의 개발자 공지 명령어로 올라온 소식이에요.</p></div>
+      <div class="section-title notice-title">
+        <div>
+          <h3>공지사항</h3>
+          <p>봇의 개발자 공지 명령어로 올라온 소식이에요. 새 공지는 위에 쌓이고, 지난 기록은 이 안에서 스크롤해서 볼 수 있어요.</p>
+        </div>
+        <span class="notice-count">${rows.length ? `${rows.length}개` : '대기 중'}</span>
+      </div>
       <div class="notice-feed">
         ${rows.map((row) => `
           <article class="support-notice-card">
@@ -255,12 +261,32 @@ function renderDeveloperAnnouncements() {
             ${row.subtitle ? `<b>${esc(row.subtitle)}</b>` : ''}
             <p>${esc(row.message || '')}</p>
             ${row.imageUrl ? `<img class="notice-image" src="${esc(row.imageUrl)}" alt="" />` : ''}
-            <small>${row.createdAt ? new Date(row.createdAt).toLocaleString('ko-KR') : '최근 공지'}</small>
+            <time datetime="${row.createdAt ? esc(new Date(row.createdAt).toISOString()) : ''}" title="${row.createdAt ? esc(new Date(row.createdAt).toLocaleString('ko-KR')) : '최근 공지'}">
+              ${formatNoticeTime(row.createdAt)}
+            </time>
           </article>
         `).join('') || '<article class="support-notice-card"><h4>공지사항</h4><p>아직 등록된 지원서버 공지가 없어요.</p></article>'}
       </div>
     </section>
   `;
+}
+
+function formatNoticeTime(value) {
+  if (!value) return '최근 공지';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '최근 공지';
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return '방금 전';
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}시간 전`;
+  return date.toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function renderOverview() {
