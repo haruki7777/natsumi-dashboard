@@ -93,10 +93,11 @@ const fallbackGuilds = [{
 
 const defaultSettings = {
   disabledCommands: [],
-  features: { welcome: false, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false },
+  features: { welcome: false, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false, moderation: false },
   welcome: { enabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해.', aiPrompt: '' },
-  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'ko_warm_female' },
+  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'anime_01' },
   emojiUpscale: { enabled: false, channelId: '', webhookName: 'Natsumi Emoji Upscaler' },
+  moderation: { enabled: false, badWordDetect: false, deleteMessage: true, warnOnBadWord: true, timeoutThreshold: 3, timeoutMinutes: 10, kickThreshold: 5, logChannelId: '', extraBadWords: [] },
 };
 
 const state = {
@@ -110,6 +111,7 @@ const state = {
   isOwner: false,
   announcements: [],
   botStatus: null,
+  heart: { verified: false, heartUrl: 'https://koreanbots.dev/bots/905355491708903485' },
 };
 
 const dashboardTabs = [
@@ -121,6 +123,9 @@ const dashboardTabs = [
   ['emoji', '이모지 업스케일'],
   ['qna', '질문답변'],
 ];
+
+dashboardTabs.splice(6, 0, ['moderation', '자동관리']);
+const premiumTabs = new Set(['settings', 'welcome', 'commands', 'tts', 'emoji', 'moderation']);
 
 function esc(value = '') {
   return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -264,13 +269,28 @@ function dashboard() {
 }
 
 function renderPanel() {
+  if (premiumTabs.has(state.activeTab) && !state.heart.verified) return renderHeartLock();
   if (state.activeTab === 'settings') return renderSettings();
   if (state.activeTab === 'welcome') return renderWelcome();
   if (state.activeTab === 'commands') return renderCommands();
   if (state.activeTab === 'tts') return renderTts();
   if (state.activeTab === 'emoji') return renderEmoji();
+  if (state.activeTab === 'moderation') return renderModeration();
   if (state.activeTab === 'qna') return renderQna();
   return renderOverview();
+}
+
+function renderHeartLock() {
+  return `
+    <section class="tool-card heart-lock">
+      <h3>한디리 하트가 필요한 관리 도구예요</h3>
+      <p>온오프, TTS, 자동관리, 이모지 업스케일 같은 서버 자동화 도구는 한디리 하트를 누른 뒤 사용할 수 있어요.</p>
+      <div class="form-actions">
+        <a class="primary-btn" href="${esc(state.heart.heartUrl)}" target="_blank" rel="noreferrer">하트 누르기</a>
+        <button class="soft-btn" data-action="refresh-heart" type="button">하트 확인</button>
+      </div>
+    </section>
+  `;
 }
 
 function renderDeveloperAnnouncements() {
@@ -422,6 +442,26 @@ function renderEmoji() {
   `;
 }
 
+function renderModeration() {
+  const moderation = state.settings.moderation || defaultSettings.moderation;
+  const words = Array.isArray(moderation.extraBadWords) ? moderation.extraBadWords.join('\n') : String(moderation.extraBadWords || '');
+  return `
+    <section class="section-title"><h3>자동관리</h3><p>욕설/금지어를 감지해서 삭제, 경고, 타임아웃, 추방까지 자동으로 처리해요.</p></section>
+    <div class="form-grid">
+      <label class="check-line"><input type="checkbox" id="moderationEnabled" ${moderation.enabled ? 'checked' : ''}> 자동관리 켜기</label>
+      <label class="check-line"><input type="checkbox" id="badWordDetect" ${moderation.badWordDetect ? 'checked' : ''}> 욕설/금지어 감지</label>
+      <label class="check-line"><input type="checkbox" id="deleteBadWord" ${moderation.deleteMessage !== false ? 'checked' : ''}> 감지된 메시지 삭제</label>
+      <label class="check-line"><input type="checkbox" id="warnBadWord" ${moderation.warnOnBadWord !== false ? 'checked' : ''}> 감지 시 경고 1회 추가</label>
+      <label>자동관리 로그 채널<select id="moderationLogChannel">${optionList('text', moderation.logChannelId)}</select></label>
+      <label>타임아웃 기준 경고 횟수<input id="timeoutThreshold" type="number" min="0" max="100" value="${Number(moderation.timeoutThreshold || 0)}" /></label>
+      <label>타임아웃 시간(분)<input id="timeoutMinutes" type="number" min="1" max="40320" value="${Number(moderation.timeoutMinutes || 10)}" /></label>
+      <label>추방 기준 경고 횟수<input id="kickThreshold" type="number" min="0" max="100" value="${Number(moderation.kickThreshold || 0)}" /></label>
+      <label>추가 금지어<textarea id="extraBadWords" placeholder="한 줄에 하나씩 적어줘">${esc(words)}</textarea></label>
+    </div>
+    <div class="form-actions"><button class="primary-btn" data-action="save-moderation" type="button">자동관리 저장</button></div>
+  `;
+}
+
 function renderQna() {
   return `
     <section class="section-title"><h3>질문답변</h3><p>사용자는 질문을 남기고 개발자는 답변할 수 있어요.</p></section>
@@ -457,7 +497,14 @@ function optionList(type, selected = '', emptyLabel = null) {
 }
 
 function voiceOptions(selected = '') {
-  return voiceList.map(([value, label]) => `<option value="${esc(value)}" ${value === selected ? 'selected' : ''}>${esc(label)}</option>`).join('');
+  const generated = [
+    ...Array.from({ length: 20 }, (_, i) => [`ko_${String(i + 1).padStart(2, '0')}`, `한국어 보이스 ${i + 1} - ${i < 10 ? '여성' : '남성'} 안내`]),
+    ...Array.from({ length: 20 }, (_, i) => [`ja_${String(i + 1).padStart(2, '0')}`, `일본어 보이스 ${i + 1} - ${i < 10 ? '여성' : '남성'} 안내`]),
+    ...Array.from({ length: 20 }, (_, i) => [`anime_${String(i + 1).padStart(2, '0')}`, `애니 보이스 ${i + 1} - 캐릭터 톤`]),
+  ];
+  generated[19] = ['Seoyeon', '한국어 기본 - 서연'];
+  generated[39] = ['Mizuki', '일본어 기본 - 미즈키'];
+  return generated.map(([value, label]) => `<option value="${esc(value)}" ${value === selected ? 'selected' : ''}>${esc(label)}</option>`).join('');
 }
 
 async function loadSession() {
@@ -521,6 +568,18 @@ async function loadBotStatus() {
   }
 }
 
+async function loadHeartStatus() {
+  if (!state.loggedIn) {
+    state.heart = { verified: false, heartUrl: state.heart.heartUrl };
+    return;
+  }
+  try {
+    state.heart = await api('/api/heart-status');
+  } catch {
+    state.heart = { ...state.heart, verified: false };
+  }
+}
+
 function formValue(selector) {
   return document.querySelector(selector)?.value?.trim() || '';
 }
@@ -563,11 +622,30 @@ function collectSettingsFromDom() {
       webhookName: formValue('#emojiWebhookName') || 'Natsumi Emoji Upscaler',
     };
   }
+  if (state.activeTab === 'moderation') {
+    next.moderation = {
+      ...next.moderation,
+      enabled: document.querySelector('#moderationEnabled')?.checked || false,
+      badWordDetect: document.querySelector('#badWordDetect')?.checked || false,
+      deleteMessage: document.querySelector('#deleteBadWord')?.checked !== false,
+      warnOnBadWord: document.querySelector('#warnBadWord')?.checked !== false,
+      logChannelId: formValue('#moderationLogChannel'),
+      timeoutThreshold: Number(formValue('#timeoutThreshold') || 0),
+      timeoutMinutes: Number(formValue('#timeoutMinutes') || 10),
+      kickThreshold: Number(formValue('#kickThreshold') || 0),
+      extraBadWords: formValue('#extraBadWords').split(/\n|,/).map((word) => word.trim()).filter(Boolean),
+    };
+    next.features = { ...next.features, moderation: next.moderation.enabled };
+  }
   return next;
 }
 
 async function saveSettings() {
   if (!state.isOwner) return publicNoticePage();
+  if (premiumTabs.has(state.activeTab) && !state.heart.verified) {
+    toast('한디리 하트를 확인한 뒤 사용할 수 있어요.');
+    return dashboard();
+  }
   const guild = currentGuild();
   const settings = collectSettingsFromDom();
   state.settings = settings;
@@ -634,13 +712,19 @@ app.addEventListener('click', async (event) => {
   if (target.dataset.action === 'login') return login();
   if (target.dataset.action === 'refresh-public') {
     await Promise.all([loadSession(), loadDeveloperAnnouncements(), loadBotStatus()]);
+    await loadHeartStatus();
     return state.isOwner ? dashboard() : publicNoticePage();
   }
   if (target.dataset.action === 'owner-dashboard') return state.isOwner ? dashboard() : publicNoticePage();
   if (!state.isOwner) return publicNoticePage();
   if (target.dataset.action === 'refresh') {
     await Promise.all([loadSession(), loadGuilds(), loadDeveloperAnnouncements(), loadBotStatus()]);
+    await loadHeartStatus();
     await loadSettings();
+    return dashboard();
+  }
+  if (target.dataset.action === 'refresh-heart') {
+    await loadHeartStatus();
     return dashboard();
   }
   if (target.dataset.tab) {
@@ -686,6 +770,7 @@ app.addEventListener('change', async (event) => {
 
 applyTheme();
 await Promise.all([loadSession(), loadDeveloperAnnouncements(), loadBotStatus()]);
+await loadHeartStatus();
 if (state.isOwner) {
   await loadGuilds();
   await loadSettings();

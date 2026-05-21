@@ -19,6 +19,9 @@ const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.TOKEN || 
 const BOT_STATUS_URL = process.env.BOT_STATUS_URL || process.env.NATSUMI_BOT_STATUS_URL || process.env.BOT_API_URL || '';
 const OWNER_USER_ID = process.env.OWNER_USER_ID || process.env.NATSUMI_OWNER_ID || '1293232804745838733';
 const DEVELOPER_NOTICE_CHANNEL_ID = process.env.DEVELOPER_NOTICE_CHANNEL_ID || '1371675674393448528';
+const KOREANBOTS_TOKEN = process.env.KOREANBOTS_TOKEN || '';
+const KOREANBOTS_BOT_ID = process.env.KOREANBOTS_BOT_ID || DISCORD_CLIENT_ID || '905355491708903485';
+const HEART_URL = process.env.KOREANBOTS_BOT_PAGE_URL || process.env.HANDIRI_HEART_URL || process.env.HEART_URL || `https://koreanbots.dev/bots/${KOREANBOTS_BOT_ID}`;
 const DISCORD_ADMINISTRATOR = 0x8n;
 const DISCORD_MANAGE_GUILD = 0x20n;
 const distDir = path.join(__dirname, 'dist');
@@ -36,11 +39,13 @@ const DashboardSettings = model('DashboardSettings', new Schema({
     shop: { type: Boolean, default: true },
     emojiUpscale: { type: Boolean, default: false },
     level: { type: Boolean, default: false },
+    moderation: { type: Boolean, default: false },
   },
   welcome: { type: Schema.Types.Mixed, default: {} },
   notice: { type: Schema.Types.Mixed, default: {} },
   tts: { type: Schema.Types.Mixed, default: {} },
   emojiUpscale: { type: Schema.Types.Mixed, default: {} },
+  moderation: { type: Schema.Types.Mixed, default: {} },
 }, { timestamps: true }));
 
 const DashboardNotice = model('DashboardNotice', new Schema({
@@ -125,6 +130,26 @@ function requireLogin(req, res, next) {
 
 function isOwner(req) {
   return Boolean(OWNER_USER_ID && req.session?.discordUser?.id === OWNER_USER_ID);
+}
+
+async function checkKoreanBotsVote(userId) {
+  if (!userId || !KOREANBOTS_BOT_ID) return false;
+  const urls = [
+    `https://koreanbots.dev/api/v2/bots/${KOREANBOTS_BOT_ID}/vote?userID=${userId}`,
+    `https://koreanbots.dev/api/v2/bots/${KOREANBOTS_BOT_ID}/votes?userID=${userId}`,
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        headers: KOREANBOTS_TOKEN ? { Authorization: KOREANBOTS_TOKEN } : {},
+        signal: AbortSignal.timeout?.(5000),
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (Boolean(data?.data?.voted || data?.voted || data?.vote || data?.result)) return true;
+    } catch {}
+  }
+  return false;
 }
 
 function requireOwner(req, res, next) {
@@ -271,6 +296,10 @@ app.get('/auth/discord/dashboard', (req, res) => startDiscordAuth(req, res, `${p
 app.get('/auth/discord/dashboard/callback', (req, res) => finishDiscordAuth(req, res, `${publicBaseUrl(req)}/auth/discord/dashboard/callback`));
 app.post('/auth/logout', (req, res) => req.session.destroy(() => res.json({ ok: true })));
 app.get('/api/auth/me', (req, res) => res.json({ user: req.session?.discordUser || null, isOwner: isOwner(req) }));
+app.get('/api/heart-status', requireLogin, async (req, res) => {
+  const verified = isOwner(req) || await checkKoreanBotsVote(req.session.discordUser.id);
+  res.json({ verified, heartUrl: HEART_URL });
+});
 app.get('/api/bot-status', async (_req, res) => {
   let bot = null;
   let botReady = false;
