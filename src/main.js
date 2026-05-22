@@ -35,16 +35,18 @@ const commandList = [
 ].map(([name, description, group, heart]) => ({ name, description, group, heart }));
 
 const voiceList = [
-  ['ko_warm_female', '한국어 여성 - 따뜻한 안내'],
-  ['ko_clear_female', '한국어 여성 - 또렷한 진행'],
-  ['ko_soft_female', '한국어 여성 - 부드러운 낭독'],
-  ['ko_bright_female', '한국어 여성 - 밝은 방송'],
-  ['ja_default', '일본어 여성 - 미즈키 기본'],
-  ['ja_anime_female', '일본어 여성 - 애니 안내'],
-  ['default_natsumi', '애니 보이스 - 나츠미 기본'],
-  ['anime_02', '애니 보이스 - 상냥한 여우'],
-  ['anime_03', '애니 보이스 - 밝은 여주인공'],
-  ['anime_05', '애니 보이스 - 귀여운 안내'],
+  ['minimax_lovely_girl', '애니 보이스 - 러블리 소녀'],
+  ['minimax_sweet_girl', '애니 보이스 - 달콤한 여우'],
+  ['minimax_lively_girl', '애니 보이스 - 활기찬 친구'],
+  ['minimax_inspirational_girl', '애니 보이스 - 반짝이는 주인공'],
+  ['minimax_calm_woman', '애니 보이스 - 차분한 선배'],
+  ['minimax_wise_woman', '애니 보이스 - 신비한 여우신'],
+  ['minimax_exuberant_girl', '애니 보이스 - 텐션 높은 상점원'],
+  ['minimax_decent_boy', '애니 보이스 - 장난꾸러기 소년'],
+  ['minimax_young_knight', '애니 보이스 - 어린 기사'],
+  ['minimax_natsumi_custom', '애니 보이스 - 나츠미 커스텀'],
+  ['ko_warm_female', '백업 - 한국어 여성'],
+  ['ja_default', '백업 - 일본어 여성'],
 ];
 
 const welcomeVariables = [
@@ -86,7 +88,7 @@ const defaultSettings = {
   disabledCommands: [],
   features: { welcome: false, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false, moderation: false },
   welcome: { enabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해!', aiPrompt: '' },
-  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'ko_warm_female' },
+  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'minimax_lovely_girl' },
   emojiUpscale: { enabled: false, channelId: '', webhookName: 'Natsumi Emoji Upscaler' },
   moderation: {
     enabled: false,
@@ -534,11 +536,7 @@ function optionList(type, selected = '', emptyLabel = null) {
 }
 
 function voiceOptions(selected = '') {
-  const generated = [
-    ...voiceList,
-    ...Array.from({ length: 10 }, (_, i) => [`anime_${String(i + 1).padStart(2, '0')}`, `애니 보이스 ${i + 1} - 캐릭터톤`]),
-  ];
-  return generated.map(([value, label]) => `<option value="${esc(value)}" ${value === selected ? 'selected' : ''}>${esc(label)}</option>`).join('');
+  return voiceList.map(([value, label]) => `<option value="${esc(value)}" ${value === selected ? 'selected' : ''}>${esc(label)}</option>`).join('');
 }
 
 async function loadSession() {
@@ -660,7 +658,7 @@ function collectSettingsFromDom() {
       categoryId: formValue('#ttsCategory'),
       textChannelId: formValue('#ttsText'),
       voiceChannelId: formValue('#ttsVoiceChannel'),
-      voice: formValue('#ttsVoice') || 'ko_warm_female',
+      voice: formValue('#ttsVoice') || 'minimax_lovely_girl',
     };
   }
   if (state.activeTab === 'emoji') {
