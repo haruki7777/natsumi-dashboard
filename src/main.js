@@ -35,6 +35,26 @@ const commandList = [
 ].map(([name, description, group, heart]) => ({ name, description, group, heart }));
 
 const voiceList = [
+  ['voicevox_zundamon_normal', '무료 애니 - 즌다몬 기본'],
+  ['voicevox_zundamon_sweet', '무료 애니 - 즌다몬 달콤'],
+  ['voicevox_zundamon_tsundere', '무료 애니 - 즌다몬 츤데레'],
+  ['voicevox_zundamon_whisper', '무료 애니 - 즌다몬 속삭임'],
+  ['voicevox_metan_normal', '무료 애니 - 시코쿠 메탄 기본'],
+  ['voicevox_metan_sweet', '무료 애니 - 시코쿠 메탄 달콤'],
+  ['voicevox_metan_tsundere', '무료 애니 - 시코쿠 메탄 츤데레'],
+  ['voicevox_metan_whisper', '무료 애니 - 시코쿠 메탄 속삭임'],
+  ['voicevox_tsumugi', '무료 애니 - 카스카베 츠무기'],
+  ['voicevox_hau', '무료 애니 - 아메하레 하우'],
+  ['voicevox_himari', '무료 애니 - 메이메이 히마리'],
+  ['voicevox_whitecul_normal', '무료 애니 - 화이트컬 기본'],
+  ['voicevox_whitecul_fun', '무료 애니 - 화이트컬 신남'],
+  ['voicevox_no7_normal', '무료 애니 - 넘버세븐 기본'],
+  ['voicevox_no7_announce', '무료 애니 - 넘버세븐 안내'],
+  ['voicevox_sora_normal', '무료 애니 - 큐슈 소라 기본'],
+  ['voicevox_sora_sweet', '무료 애니 - 큐슈 소라 달콤'],
+  ['voicevox_ritsu', '무료 애니 - 나미네 리츠'],
+  ['voicevox_ryusei', '무료 애니 - 아오야마 류세이'],
+  ['voicevox_takehiro', '무료 애니 - 쿠로노 타케히로'],
   ['minimax_lovely_girl', '애니 보이스 - 러블리 소녀'],
   ['minimax_sweet_girl', '애니 보이스 - 달콤한 여우'],
   ['minimax_lively_girl', '애니 보이스 - 활기찬 친구'],
@@ -88,7 +108,7 @@ const defaultSettings = {
   disabledCommands: [],
   features: { welcome: false, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false, moderation: false },
   welcome: { enabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해!', aiPrompt: '' },
-  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'minimax_lovely_girl' },
+  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'voicevox_zundamon_normal' },
   emojiUpscale: { enabled: false, channelId: '', webhookName: 'Natsumi Emoji Upscaler' },
   moderation: {
     enabled: false,
@@ -658,7 +678,7 @@ function collectSettingsFromDom() {
       categoryId: formValue('#ttsCategory'),
       textChannelId: formValue('#ttsText'),
       voiceChannelId: formValue('#ttsVoiceChannel'),
-      voice: formValue('#ttsVoice') || 'minimax_lovely_girl',
+      voice: formValue('#ttsVoice') || 'voicevox_zundamon_normal',
     };
   }
   if (state.activeTab === 'emoji') {
