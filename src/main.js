@@ -1,4 +1,4 @@
-import './style.css';
+﻿import './style.css';
 
 const DASHBOARD_SERVER_URL = 'http://natsumidashboard.kro.kr:25901';
 const isLocalPreview = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
@@ -37,14 +37,14 @@ const commandList = [
 const voiceList = [
   ['ko_warm_female', '한국어 여성 - 따뜻한 안내'],
   ['ko_clear_female', '한국어 여성 - 또렷한 진행'],
-  ['ko_soft_female', '한국어 여성 - 부드러운 애니톤'],
-  ['ko_bright_female', '한국어 여성 - 밝은 방송톤'],
-  ['ko_calm_male', '한국어 남성 - 차분한 안내'],
-  ['ja_soft_female', '일본어 여성 - 부드러운 애니톤'],
-  ['ja_bright_female', '일본어 여성 - 밝은 캐릭터톤'],
-  ['ja_calm_female', '일본어 여성 - 차분한 내레이션'],
-  ['ja_clear_male', '일본어 남성 - 또렷한 진행'],
-  ['default_natsumi', '기본 보이스 - 나츠미'],
+  ['ko_soft_female', '한국어 여성 - 부드러운 낭독'],
+  ['ko_bright_female', '한국어 여성 - 밝은 방송'],
+  ['ja_default', '일본어 여성 - 미즈키 기본'],
+  ['ja_anime_female', '일본어 여성 - 애니 안내'],
+  ['default_natsumi', '애니 보이스 - 나츠미 기본'],
+  ['anime_02', '애니 보이스 - 상냥한 여우'],
+  ['anime_03', '애니 보이스 - 밝은 여주인공'],
+  ['anime_05', '애니 보이스 - 귀여운 안내'],
 ];
 
 const welcomeVariables = [
@@ -449,7 +449,7 @@ function renderEmoji() {
   const emoji = state.settings.emojiUpscale || defaultSettings.emojiUpscale;
   return `
     <section class="section-title"><h3>이미지 업스케일</h3><p>이모지를 크게 보여주는 기능을 관리해요.</p></section>
-    <div class="toggle-grid">${toggleCard({ id: 'emojiEnabled', label: '이모지 업스케일 켜기', description: '반응 채널을 비우면 모든 채널에서 작동해요.', checked: Boolean(emoji.enabled) })}</div>
+    <div class="toggle-grid">${toggleCard({ id: 'emojiEnabled', label: '이모지 업스케일 켜기', description: '커스텀 이모지 확대만 처리하고 일반 사진은 건드리지 않아요.', checked: Boolean(emoji.enabled) })}</div>
     <div class="form-grid">
       <label>반응 채널<select id="emojiChannel">${optionList('text', emoji.channelId, '모든 채널에서 자동 반응')}</select></label>
       <label>웹훅 표시 이름<input id="emojiWebhookName" value="${esc(emoji.webhookName || 'Natsumi Emoji Upscaler')}" /></label>
