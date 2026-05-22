@@ -48,6 +48,8 @@ const voiceList = [
   ['google_ja_female', '백업 - 구글 일본어 기본'],
   ['google_ja_anime', '백업 - 구글 일본어 애니 멘트'],
 ];
+const voiceValues = new Set(voiceList.map(([value]) => value));
+const normalizeVoice = (value) => voiceValues.has(value) ? value : 'melotts_kr_default';
 
 const welcomeVariables = [
   '{user}', '{user.name}', '{user.tag}', '{user.id}', '{user.mention}',
@@ -440,7 +442,7 @@ function renderCommands() {
 }
 
 function renderTts() {
-  const tts = state.settings.tts || defaultSettings.tts;
+  const tts = { ...(state.settings.tts || defaultSettings.tts), voice: normalizeVoice(state.settings.tts?.voice) };
   return `
     <section class="section-title"><h3>TTS 관리</h3><p>전용 채팅방에 글을 쓰면 나츠미가 음성채널에 들어가 읽어줘요.</p></section>
     <div class="toggle-grid">${toggleCard({ id: 'ttsEnabled', label: 'TTS 켜기', description: '전용 채팅방 메시지를 음성으로 읽어요.', checked: Boolean(tts.enabled) })}</div>
@@ -666,7 +668,7 @@ function collectSettingsFromDom() {
       categoryId: formValue('#ttsCategory'),
       textChannelId: formValue('#ttsText'),
       voiceChannelId: formValue('#ttsVoiceChannel'),
-      voice: formValue('#ttsVoice') || 'melotts_kr_default',
+      voice: normalizeVoice(formValue('#ttsVoice')),
     };
   }
   if (state.activeTab === 'emoji') {
