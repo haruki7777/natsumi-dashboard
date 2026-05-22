@@ -35,6 +35,10 @@ const commandList = [
 ].map(([name, description, group, heart]) => ({ name, description, group, heart }));
 
 const voiceList = [
+  ['google_ko_female', '구글 TTS - 한국어 여성 기본'],
+  ['google_ko_clear', '구글 TTS - 한국어 또렷한 안내'],
+  ['google_ja_female', '구글 TTS - 일본어 여성 기본'],
+  ['google_ja_anime', '구글 TTS - 일본어 애니 멘트'],
   ['clova_nara_bright', '클로바 - 나라 밝은 안내'],
   ['clova_nara_soft', '클로바 - 나라 부드러운 친구'],
   ['clova_vyuna_lovely', '클로바 - 유나 러블리'],
@@ -124,7 +128,7 @@ const defaultSettings = {
   disabledCommands: [],
   features: { welcome: false, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false, moderation: false },
   welcome: { enabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해!', aiPrompt: '' },
-  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'clova_nara_bright' },
+  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'google_ko_female' },
   emojiUpscale: { enabled: false, channelId: '', webhookName: 'Natsumi Emoji Upscaler' },
   moderation: {
     enabled: false,
@@ -702,7 +706,7 @@ function collectSettingsFromDom() {
       categoryId: formValue('#ttsCategory'),
       textChannelId: formValue('#ttsText'),
       voiceChannelId: formValue('#ttsVoiceChannel'),
-      voice: formValue('#ttsVoice') || 'clova_nara_bright',
+      voice: formValue('#ttsVoice') || 'google_ko_female',
     };
   }
   if (state.activeTab === 'emoji') {
