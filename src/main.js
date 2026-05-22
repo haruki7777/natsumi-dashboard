@@ -35,21 +35,31 @@ const commandList = [
 ].map(([name, description, group, heart]) => ({ name, description, group, heart }));
 
 const voiceList = [
-  ['melotts_kr_default', 'MeloTTS - 한국어 기본'],
-  ['melotts_kr_soft', 'MeloTTS - 한국어 부드러운 안내'],
-  ['melotts_kr_bright', 'MeloTTS - 한국어 밝은 진행'],
-  ['melotts_kr_story', 'MeloTTS - 한국어 이야기 톤'],
-  ['melotts_jp_default', 'MeloTTS - 일본어 기본'],
-  ['melotts_jp_anime', 'MeloTTS - 일본어 애니 멘트'],
-  ['melotts_jp_soft', 'MeloTTS - 일본어 부드러운 톤'],
-  ['melotts_jp_bright', 'MeloTTS - 일본어 밝은 진행'],
-  ['google_ko_female', '백업 - 구글 한국어 기본'],
-  ['google_ko_clear', '백업 - 구글 한국어 안내'],
-  ['google_ja_female', '백업 - 구글 일본어 기본'],
-  ['google_ja_anime', '백업 - 구글 일본어 애니 멘트'],
+  ['edge_ko_sunhi', '한국어 여성 - 선히'],
+  ['edge_ko_jimin', '한국어 여성 - 지민'],
+  ['edge_ko_seohyeon', '한국어 여성 - 서현'],
+  ['edge_ko_yujin', '한국어 여성 - 유진'],
+  ['edge_ko_soonbok', '한국어 여성 - 순복'],
+  ['edge_ko_injoon', '한국어 남성 - 인준'],
+  ['edge_ko_bongjin', '한국어 남성 - 봉진'],
+  ['edge_ko_gookmin', '한국어 남성 - 국민'],
+  ['edge_ja_nanami', '일본어 여성 - 나나미'],
+  ['edge_ja_aoi', '일본어 여성 - 아오이'],
+  ['edge_ja_mayu', '일본어 여성 - 마유'],
+  ['edge_ja_shiori', '일본어 여성 - 시오리'],
+  ['edge_ja_keita', '일본어 남성 - 케이타'],
+  ['edge_ja_daichi', '일본어 남성 - 다이치'],
+  ['edge_ja_naoki', '일본어 남성 - 나오키'],
+  ['edge_ja_masaru', '일본어 남성 - 마사루'],
+  ['melotts_kr_default', 'MeloTTS 보조 - 한국어 기본'],
+  ['melotts_kr_soft', 'MeloTTS 보조 - 한국어 부드러운 톤'],
+  ['melotts_jp_default', 'MeloTTS 보조 - 일본어 기본'],
+  ['melotts_jp_soft', 'MeloTTS 보조 - 일본어 부드러운 톤'],
+  ['google_ko', 'Google 보조 - 한국어'],
+  ['google_ja', 'Google 보조 - 일본어'],
 ];
 const voiceValues = new Set(voiceList.map(([value]) => value));
-const normalizeVoice = (value) => voiceValues.has(value) ? value : 'melotts_kr_default';
+const normalizeVoice = (value) => voiceValues.has(value) ? value : 'edge_ko_sunhi';
 
 const welcomeVariables = [
   '{user}', '{user.name}', '{user.tag}', '{user.id}', '{user.mention}',
@@ -90,7 +100,7 @@ const defaultSettings = {
   disabledCommands: [],
   features: { welcome: false, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false, moderation: false },
   welcome: { enabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해!', aiPrompt: '' },
-  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'melotts_kr_default' },
+  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'edge_ko_sunhi' },
   emojiUpscale: { enabled: false, channelId: '', webhookName: 'Natsumi Emoji Upscaler' },
   moderation: {
     enabled: false,
