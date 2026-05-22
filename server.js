@@ -342,6 +342,7 @@ app.get('/api/bot-status', async (_req, res) => {
   const guildCount = liveGuildCount || (Number.isFinite(configuredGuildCount) && configuredGuildCount > 0 ? configuredGuildCount : null);
   res.json({
     apiOk: true,
+    botId: bot?.id || KOREANBOTS_BOT_ID || null,
     botReady,
     botName: bot?.username || 'NATSUMI',
     botApiOk,
@@ -387,13 +388,17 @@ app.post('/api/developer-announcements', requireLogin, requireOwner, async (req,
 
 app.get('/api/dashboard/guilds', requireLogin, requireOwner, async (req, res) => {
   const manageable = (await fetchUserGuilds(req)).filter(isGuildAdmin);
-  const guilds = await Promise.all(manageable.map(async (guild) => ({
-    id: guild.id,
-    name: guild.name,
-    icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128` : '',
-    manageable: true,
-    channels: await fetchBotGuildChannels(guild.id),
-  })));
+  const guilds = await Promise.all(manageable.map(async (guild) => {
+    const channels = await fetchBotGuildChannels(guild.id);
+    return {
+      id: guild.id,
+      name: guild.name,
+      icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128` : '',
+      manageable: true,
+      botPresent: channels.length > 0,
+      channels,
+    };
+  }));
   res.json({ guilds });
 });
 

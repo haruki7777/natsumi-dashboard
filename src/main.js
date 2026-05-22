@@ -1,34 +1,25 @@
 import './style.css';
 
 const DASHBOARD_SERVER_URL = 'http://natsumidashboard.kro.kr:25901';
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || (location.hostname === 'localhost' ? window.location.origin : DASHBOARD_SERVER_URL)).replace(/\/$/, '');
+const isLocalPreview = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || (isLocalPreview ? window.location.origin : DASHBOARD_SERVER_URL)).replace(/\/$/, '');
 const NATSUMI_PROFILE_IMAGE = '/natsumi-profile-03.jpg';
 const themeKey = 'natsumi-dashboard-theme';
 const selectedGuildKey = 'natsumi-dashboard-selected-guild';
 const app = document.getElementById('app');
 
-const ownerOnlyCommands = new Set(['개발자공지', '개발자답변', '명령어리로드', 'natsufix']);
 const commandList = [
   ['도움말', '기본 안내와 링크를 보여줘요.', 'general'],
-  ['핑', '봇 지연시간과 상태를 확인해요.', 'general'],
-  ['진단', '봇 상태와 서버 연결을 확인해요.', 'general'],
+  ['핑', '봇 지연시간을 확인해요.', 'general'],
+  ['진단', '봇 상태와 연결을 확인해요.', 'general'],
   ['랭크', '레벨과 랭크카드를 보여줘요.', 'general'],
-  ['랭킹', '서버 순위를 확인해요.', 'general'],
-  ['유저정보', '유저 정보와 배너를 확인해요.', 'general'],
   ['서버정보', '서버 정보를 확인해요.', 'general'],
-  ['웹상점', '웹상점 링크를 열어요.', 'general'],
-  ['나츠미서버설정', '대시보드로 이동해요.', 'general', true],
-  ['투표', '간단한 투표를 만들어요.', 'general'],
+  ['유저정보', '유저 정보와 배너를 확인해요.', 'general'],
   ['문의', '개발자에게 문의를 보내요.', 'util'],
   ['이모지스틸', '이모지를 서버에 가져와요.', 'util'],
-  ['밴', '멤버를 차단해요.', 'mod'],
-  ['킥', '멤버를 추방해요.', 'mod'],
-  ['타임아웃', '멤버에게 타임아웃을 걸어요.', 'mod'],
   ['청소', '메시지를 정리해요.', 'mod'],
   ['공지', '서버 공지를 보내요.', 'mod'],
   ['금지어', '금지어를 관리해요.', 'mod'],
-  ['경고', '경고를 추가, 차감, 조회해요.', 'mod'],
-  ['경고설정', '경고 로그와 자동 추방을 설정해요.', 'mod'],
   ['티켓설정', '티켓 시스템을 설정해요.', 'ticket', true],
   ['sfw', '안전한 이미지 메뉴를 열어요.', 'image', true],
   ['애니짤', '애니 이미지 메뉴를 열어요.', 'image', true],
@@ -41,8 +32,7 @@ const commandList = [
   ['두더지', '두더지 속도전을 플레이해요.', 'game'],
   ['낚시', '낚시 게임을 플레이해요.', 'game'],
   ['슬롯', '슬롯 게임을 플레이해요.', 'game'],
-  ['인벤토리', '가방을 확인해요.', 'game'],
-].filter(([name]) => !ownerOnlyCommands.has(name)).map(([name, description, group, heart]) => ({ name, description, group, heart }));
+].map(([name, description, group, heart]) => ({ name, description, group, heart }));
 
 const voiceList = [
   ['ko_warm_female', '한국어 여성 - 따뜻한 안내'],
@@ -64,17 +54,17 @@ const welcomeVariables = [
 ];
 
 const sampleTemplates = [
-  ['첫 인사', '{user.mention} 어서 와! {server.name}의 {member.count}번째 별이 되어줘서 고마워.'],
-  ['랭크 카드', '환영해, {user.name}! 프로필 카드도 곧 준비해둘게.'],
+  ['첫 인사', '{user.mention} 어서 와! {server.name}에 와줘서 고마워.'],
+  ['랭크 카드', '환영해, {user.name}! 프로필 카드를 곧 준비해줄게.'],
   ['관리 안내', '{user.mention} 님이 입장했어요. 규칙을 확인하고 즐겁게 지내주세요.'],
   ['친근한 말투', '{random.welcome} {user.name}! 기다리고 있었어.'],
-  ['AI 프롬프트', '새 멤버 {user.name}에게 짧고 따뜻한 나츠미식 환영 인사를 만들어줘.'],
-  ['게임센터', 'PRESS START, {user.name}! {server.name} 모험을 시작했어.'],
+  ['AI 프롬프트', '새 멤버 {user.name}에게 귀엽고 따뜻한 나츠미식 환영 인사를 만들어줘.'],
+  ['게임센터', 'PRESS START, {user.name}! {server.name} 모험이 시작됐어.'],
   ['차분한 안내', '{user.mention} 님, 환영합니다. 필요한 안내는 공지 채널에서 확인해주세요.'],
-  ['친구 초대', '{user.name} 등장! 다들 반겨줘. 지금 멤버는 {server.count}명이야.'],
+  ['친구 초대', '{user.name} 등장! 지금 멤버는 {server.count}명이야.'],
   ['프리미엄 하트', '{user.mention} 환영해! 일부 기능은 프리미엄 하트 인증 후 사용할 수 있어.'],
-  ['짧은 문구', '{user.mention} 환영해.'],
-  ['입장 회수', '{user.name} 님의 입장 카드는 퇴장하면 자동 정리돼요.'],
+  ['짧은 문구', '{user.mention} 환영해!'],
+  ['입장 회수', '{user.name} 님의 입장 카드는 나가면 자동 정리돼요.'],
 ];
 
 const fallbackGuilds = [{
@@ -82,6 +72,7 @@ const fallbackGuilds = [{
   name: '나츠미 미리보기 서버',
   icon: '',
   manageable: true,
+  botPresent: true,
   channels: [
     { id: 'notice', name: '공지', type: 'text' },
     { id: 'welcome', name: '환영인사', type: 'text' },
@@ -94,11 +85,44 @@ const fallbackGuilds = [{
 const defaultSettings = {
   disabledCommands: [],
   features: { welcome: false, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false, moderation: false },
-  welcome: { enabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해.', aiPrompt: '' },
-  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'anime_01' },
+  welcome: { enabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해!', aiPrompt: '' },
+  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'ko_warm_female' },
   emojiUpscale: { enabled: false, channelId: '', webhookName: 'Natsumi Emoji Upscaler' },
-  moderation: { enabled: false, badWordDetect: false, deleteMessage: true, warnOnBadWord: true, timeoutThreshold: 3, timeoutMinutes: 10, kickThreshold: 5, logChannelId: '', extraBadWords: [] },
+  moderation: {
+    enabled: false,
+    badWordDetect: false,
+    deleteMessage: true,
+    warnOnBadWord: true,
+    timeoutThreshold: 3,
+    timeoutMinutes: 10,
+    kickThreshold: 5,
+    logChannelId: '',
+    extraBadWords: [],
+    whitelist: { users: [], roles: [], channels: [] },
+    antiRaid: {
+      enabled: false,
+      action: 'log',
+      windowSeconds: 15,
+      channelCreateLimit: 5,
+      roleDeleteLimit: 3,
+      memberKickLimit: 5,
+      memberBanLimit: 5,
+      suspiciousBotDetect: true,
+      timeoutMinutes: 30,
+    },
+  },
 };
+
+const dashboardTabs = [
+  ['settings', '설정'],
+  ['welcome', '환영인사'],
+  ['commands', '명령어 켜고 끄기'],
+  ['tts', 'TTS 관리'],
+  ['emoji', '이미지 업스케일'],
+  ['moderation', '자동관리'],
+  ['qna', '질문답변'],
+];
+const premiumTabs = new Set(['settings', 'welcome', 'commands', 'tts', 'emoji', 'moderation']);
 
 const state = {
   theme: localStorage.getItem(themeKey) || 'light',
@@ -107,25 +131,13 @@ const state = {
   guilds: [],
   selectedGuild: null,
   settings: structuredClone(defaultSettings),
-  activeTab: 'overview',
+  activeTab: 'notice',
+  menuOpen: false,
   isOwner: false,
   announcements: [],
   botStatus: null,
   heart: { verified: false, heartUrl: 'https://koreanbots.dev/bots/905355491708903485' },
 };
-
-const dashboardTabs = [
-  ['overview', '한눈에 보기'],
-  ['settings', '설정'],
-  ['welcome', '환영인사'],
-  ['commands', '명령어 켜고 끄기'],
-  ['tts', 'TTS 관리'],
-  ['emoji', '이모지 업스케일'],
-  ['qna', '질문답변'],
-];
-
-dashboardTabs.splice(6, 0, ['moderation', '자동관리']);
-const premiumTabs = new Set(['settings', 'welcome', 'commands', 'tts', 'emoji', 'moderation']);
 
 function esc(value = '') {
   return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -155,6 +167,11 @@ function currentGuild() {
   return state.selectedGuild || state.guilds[0] || fallbackGuilds[0];
 }
 
+function botInviteUrl() {
+  const botId = state.botStatus?.botId || '905355491708903485';
+  return `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(botId)}&permissions=8&scope=bot%20applications.commands`;
+}
+
 function channels() {
   return currentGuild().channels || [];
 }
@@ -170,13 +187,23 @@ function avatarUrl() {
   return NATSUMI_PROFILE_IMAGE;
 }
 
+function toggleCard({ id, label, description = '', checked = false, data = '' }) {
+  return `
+    <label class="toggle-card">
+      <input type="checkbox" id="${esc(id)}" ${data} ${checked ? 'checked' : ''}>
+      <span class="toggle-copy"><b>${esc(label)}</b>${description ? `<small>${esc(description)}</small>` : ''}</span>
+      <span class="toggle-slider"><i></i><em>${checked ? '켜짐' : '꺼짐'}</em></span>
+    </label>
+  `;
+}
+
 function shell(content) {
   const profileName = state.profile?.globalName || state.profile?.username || '관리자';
   return `
     <div class="page-shell">
       ${renderPetals()}
       <header class="topbar glass">
-        <button class="brand" data-action="home" type="button">
+        <button class="brand" data-action="notice" type="button">
           <span><img src="${NATSUMI_PROFILE_IMAGE}" alt="" /></span><b>NATSUMI</b>
         </button>
         <div class="top-actions">
@@ -184,7 +211,7 @@ function shell(content) {
             <input type="checkbox" data-action="theme-toggle" ${state.theme === 'dark' ? 'checked' : ''}>
             <span></span>
           </label>
-          <button class="icon-menu-btn" data-action="mobile-menu" type="button" aria-label="메뉴">☰</button>
+          ${state.isOwner ? `<button class="icon-menu-btn ${state.menuOpen ? 'active' : ''}" data-action="toggle-menu" type="button" aria-label="메뉴">☰</button>` : ''}
           ${state.loggedIn
             ? `<div class="login-pill"><img src="${esc(avatarUrl())}" alt="" /><b>${esc(profileName)}</b></div>`
             : `<button class="primary-btn" data-action="login" type="button">Discord Login</button>`}
@@ -193,26 +220,22 @@ function shell(content) {
       ${content}
       <footer class="footer glass">
         <b>나츠미 관리자 모드</b>
-        <small>공지사항은 공개로 보이고, 설정은 지정된 개발자만 사용할 수 있어요.</small>
+        <small>공지사항은 공개로 보이고, 설정은 지정된 개발자와 관리자만 사용할 수 있어요.</small>
       </footer>
     </div>
   `;
 }
 
 function renderPetals() {
-  return `
-    <div class="dashboard-petals" aria-hidden="true">
-      ${Array.from({ length: 14 }, (_, index) => {
-        const x = 3 + ((index * 19) % 94);
-        const drift = index % 2 === 0 ? 36 + index * 7 : -42 - index * 5;
-        const delay = -(index % 9);
-        const duration = 10 + (index % 6);
-        const size = 9 + (index % 5) * 2;
-        const spin = 240 + index * 31;
-        return `<span style="--x:${x}vw;--drift:${drift}px;--delay:${delay}s;--dur:${duration}s;--size:${size}px;--spin:${spin}deg"></span>`;
-      }).join('')}
-    </div>
-  `;
+  return `<div class="dashboard-petals" aria-hidden="true">${Array.from({ length: 14 }, (_, index) => {
+    const x = 3 + ((index * 19) % 94);
+    const drift = index % 2 === 0 ? 36 + index * 7 : -42 - index * 5;
+    const delay = -(index % 9);
+    const duration = 10 + (index % 6);
+    const size = 9 + (index % 5) * 2;
+    const spin = 240 + index * 31;
+    return `<span style="--x:${x}vw;--drift:${drift}px;--delay:${delay}s;--dur:${duration}s;--size:${size}px;--spin:${spin}deg"></span>`;
+  }).join('')}</div>`;
 }
 
 function publicNoticePage() {
@@ -220,10 +243,10 @@ function publicNoticePage() {
     <main class="hero-panel glass">
       <p class="eyebrow">Natsumi Notice</p>
       <h1>나츠미 지원 서버</h1>
-      <p class="hero-desc">나츠미의 최신 소식과 점검 안내를 한눈에 볼 수 있어요.</p>
+      <p class="hero-desc">나츠미의 최신 소식과 점검 안내를 먼저 확인할 수 있어요.</p>
       <div class="hero-actions">
         <button class="soft-btn" data-action="refresh-public" type="button">새로고침</button>
-        ${state.isOwner ? '<button class="primary-btn" data-action="owner-dashboard" type="button">관리자 모드</button>' : ''}
+        ${state.isOwner ? '<button class="primary-btn" data-action="toggle-menu" type="button">관리 메뉴</button>' : ''}
       </div>
       ${renderDeveloperAnnouncements()}
     </main>
@@ -234,41 +257,44 @@ function dashboard() {
   if (!state.isOwner) return publicNoticePage();
   const guild = currentGuild();
   app.innerHTML = shell(`
-    <div class="dashboard-shell">
-      <aside class="sidebar glass">
-        <div class="profile-card">
-          <div class="avatar big"><img src="${esc(avatarUrl())}" alt="" /></div>
-          <div><b>${esc(state.profile?.globalName || state.profile?.username || 'yukiha_haruki')}</b><small>관리자 모드</small></div>
-        </div>
-        <label class="select-label">서버 선택</label>
-        <select class="wide-select" id="guildSelect">${state.guilds.map((g) => `<option value="${esc(g.id)}" ${g.id === guild.id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>
-        <div class="menu-list">
-          ${[
-            ['overview', '한눈에 보기'],
-            ['settings', '설정'],
-            ['welcome', '환영인사'],
-            ['commands', '명령어 켜고 끄기'],
-            ['tts', 'TTS 관리'],
-            ['emoji', '이모지 업스케일'],
-            ['qna', '질문답변'],
-          ].map(([tab, label]) => `<button class="menu-tile ${state.activeTab === tab ? 'active' : ''}" data-tab="${tab}" type="button">${label}</button>`).join('')}
-        </div>
-      </aside>
-      <main class="main glass">
+    <main class="dashboard-page">
+      ${renderMenuDrawer()}
+      <section class="main glass">
         <header class="main-head">
-          <div><p class="eyebrow">Selected Server</p><h2>${esc(guild.name)}</h2></div>
+          <div><p class="eyebrow">${state.activeTab === 'notice' ? 'Notice' : 'Dashboard'}</p><h2>${state.activeTab === 'notice' ? '공지사항' : esc(tabLabel(state.activeTab))}</h2></div>
           <button class="soft-btn" data-action="refresh" type="button">새로고침</button>
         </header>
-        <nav class="panel-menu" aria-label="Dashboard sections">
-          ${dashboardTabs.map(([tab, label]) => `<button class="panel-menu-btn ${state.activeTab === tab ? 'active' : ''}" data-tab="${tab}" type="button">${label}</button>`).join('')}
-        </nav>
         <div id="panel">${renderPanel()}</div>
-      </main>
-    </div>
+      </section>
+    </main>
   `);
 }
 
+function renderMenuDrawer() {
+  if (!state.menuOpen) return '';
+  const guild = currentGuild();
+  return `
+    <aside class="sidebar glass">
+      <div class="profile-card">
+        <div class="avatar big"><img src="${esc(avatarUrl())}" alt="" /></div>
+        <div><b>${esc(state.profile?.globalName || state.profile?.username || 'yukiha_haruki')}</b><small>관리자 모드</small></div>
+      </div>
+      <label class="select-label">서버 선택</label>
+      <select class="wide-select" id="guildSelect">
+        ${state.guilds.map((g) => `<option value="${esc(g.id)}" ${g.id === guild.id ? 'selected' : ''} ${g.botPresent === false ? 'data-missing-bot="1"' : ''}>${esc(g.name)}${g.botPresent === false ? ' · 나츠미 초대 필요' : ''}</option>`).join('')}
+      </select>
+      <div class="menu-list">
+        <button class="menu-tile ${state.activeTab === 'notice' ? 'active' : ''}" data-tab="notice" type="button">공지사항</button>
+        ${dashboardTabs.map(([tab, label]) => `<button class="menu-tile ${state.activeTab === tab ? 'active' : ''}" data-tab="${tab}" type="button">${label}</button>`).join('')}
+      </div>
+    </aside>
+  `;
+}
+
 function renderPanel() {
+  const guild = currentGuild();
+  if (state.activeTab === 'notice') return renderDeveloperAnnouncements();
+  if (guild.botPresent === false) return renderInviteRequired(guild);
   if (premiumTabs.has(state.activeTab) && !state.heart.verified) return renderHeartLock();
   if (state.activeTab === 'settings') return renderSettings();
   if (state.activeTab === 'welcome') return renderWelcome();
@@ -277,14 +303,27 @@ function renderPanel() {
   if (state.activeTab === 'emoji') return renderEmoji();
   if (state.activeTab === 'moderation') return renderModeration();
   if (state.activeTab === 'qna') return renderQna();
-  return renderOverview();
+  return renderDeveloperAnnouncements();
+}
+
+function renderInviteRequired(guild) {
+  return `
+    <section class="tool-card invite-required">
+      <h3>나츠미를 먼저 초대해야 해요</h3>
+      <p>${esc(guild.name)} 서버는 관리자 권한은 확인됐지만, 나츠미가 아직 들어가 있지 않거나 채널 정보를 읽을 수 없어요. 나츠미를 초대한 뒤 다시 새로고침해줘.</p>
+      <div class="form-actions">
+        <a class="primary-btn" href="${botInviteUrl()}" target="_blank" rel="noreferrer">나츠미 초대하기</a>
+        <button class="soft-btn" data-action="refresh" type="button">다시 확인</button>
+      </div>
+    </section>
+  `;
 }
 
 function renderHeartLock() {
   return `
     <section class="tool-card heart-lock">
       <h3>한디리 하트가 필요한 관리 도구예요</h3>
-      <p>온오프, TTS, 자동관리, 이모지 업스케일 같은 서버 자동화 도구는 한디리 하트를 누른 뒤 사용할 수 있어요.</p>
+      <p>환영인사, TTS, 자동관리, 이모지 업스케일 같은 서버 자동화 도구는 하트 인증 후 사용할 수 있어요.</p>
       <div class="form-actions">
         <a class="primary-btn" href="${esc(state.heart.heartUrl)}" target="_blank" rel="noreferrer">하트 누르기</a>
         <button class="soft-btn" data-action="refresh-heart" type="button">하트 확인</button>
@@ -300,7 +339,7 @@ function renderDeveloperAnnouncements() {
       <div class="section-title notice-title">
         <div>
           <h3>공지사항</h3>
-          <p>봇의 개발자 공지 명령어로 올라온 소식이에요. 새 공지는 위에 쌓이고, 지난 기록은 이 안에서 스크롤해서 볼 수 있어요.</p>
+          <p>나츠미의 최신 소식과 점검 안내가 여기에 올라와요.</p>
         </div>
         <span class="notice-count">${rows.length ? `${rows.length}개` : '대기 중'}</span>
       </div>
@@ -311,9 +350,7 @@ function renderDeveloperAnnouncements() {
             ${row.subtitle ? `<b>${esc(row.subtitle)}</b>` : ''}
             <p>${esc(row.message || '')}</p>
             ${row.imageUrl ? `<img class="notice-image" src="${esc(row.imageUrl)}" alt="" />` : ''}
-            <time datetime="${row.createdAt ? esc(new Date(row.createdAt).toISOString()) : ''}" title="${row.createdAt ? esc(new Date(row.createdAt).toLocaleString('ko-KR')) : '최근 공지'}">
-              ${formatNoticeTime(row.createdAt)}
-            </time>
+            <time datetime="${row.createdAt ? esc(new Date(row.createdAt).toISOString()) : ''}">${formatNoticeTime(row.createdAt)}</time>
           </article>
         `).join('') || '<article class="support-notice-card"><h4>공지사항</h4><p>아직 등록된 지원서버 공지가 없어요.</p></article>'}
       </div>
@@ -325,52 +362,26 @@ function formatNoticeTime(value) {
   if (!value) return '최근 공지';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '최근 공지';
-  const diffMs = Date.now() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
+  const diffMin = Math.floor((Date.now() - date.getTime()) / 60000);
   if (diffMin < 1) return '방금 전';
   if (diffMin < 60) return `${diffMin}분 전`;
   const diffHour = Math.floor(diffMin / 60);
   if (diffHour < 24) return `${diffHour}시간 전`;
-  return date.toLocaleString('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function renderOverview() {
-  const guild = currentGuild();
-  const status = state.botStatus || {};
-  const featureEntries = Object.entries(state.settings.features || {});
-  return `
-    ${renderDeveloperAnnouncements()}
-    <section class="section-title"><h3>한눈에 보기</h3><p>공지, API 연결, 봇 서버 상태를 첫 화면에서 확인해요.</p></section>
-    <div class="stat-row">
-      <article><span>API</span><b>${status.apiOk === false ? '주의' : '정상'}</b></article>
-      <article><span>나츠미가 지키는 서버</span><b>${status.guildCount ?? '확인 중'}</b></article>
-      <article><span>관리 가능한 서버</span><b>${state.guilds.length}</b></article>
-      <article><span>채널</span><b>${channels().length}</b></article>
-      <article><span>꺼진 명령어</span><b>${state.settings.disabledCommands?.length || 0}</b></article>
-    </div>
-    <div class="server-grid">
-      <article class="server-card static-card"><div class="server-icon">${guild.icon ? `<img src="${esc(guild.icon)}" alt="" />` : 'N'}</div><div><b>${esc(guild.name)}</b><small>${guild.manageable === false ? '권한 확인 필요' : '관리 가능'}</small></div></article>
-      ${featureEntries.map(([key, value]) => `<article class="mini-card"><span>${featureName(key)}</span><b>${value ? '켜짐' : '꺼짐'}</b></article>`).join('')}
-    </div>
-  `;
+  return date.toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 function renderSettings() {
   const features = state.settings.features || {};
   return `
-    <section class="section-title"><h3>설정</h3><p>서버 기능을 전체적으로 켜고 꺼요.</p></section>
-    <div class="command-list">
-      ${Object.entries(features).map(([key, value]) => `
-        <article class="command-card">
-          <div><h4>${featureName(key)}</h4><p>${featureDesc(key)}</p></div>
-          <label class="switch"><input type="checkbox" data-feature="${key}" ${value ? 'checked' : ''}><span></span></label>
-        </article>
-      `).join('')}
+    <section class="section-title"><h3>설정</h3><p>서버 기능을 슬라이드 버튼으로 켜고 끌 수 있어요.</p></section>
+    <div class="toggle-grid">
+      ${Object.entries(features).map(([key, value]) => toggleCard({
+        id: `feature-${key}`,
+        label: featureName(key),
+        description: featureDesc(key),
+        checked: Boolean(value),
+        data: `data-feature="${key}"`,
+      })).join('')}
     </div>
     <div class="form-actions"><button class="primary-btn" data-action="save-settings" type="button">설정 저장</button></div>
   `;
@@ -379,13 +390,15 @@ function renderSettings() {
 function renderWelcome() {
   const welcome = state.settings.welcome || defaultSettings.welcome;
   return `
-    <section class="section-title"><h3>환영인사</h3><p>채널과 문구를 지정하고 테스트 메시지로 확인해요.</p></section>
+    <section class="section-title"><h3>환영인사</h3><p>입장 카드와 환영 멘트를 관리해요.</p></section>
+    <div class="toggle-grid">
+      ${toggleCard({ id: 'welcomeEnabled', label: '환영인사 켜기', description: '멤버가 들어오면 환영 카드를 보내요.', checked: Boolean(welcome.enabled) })}
+      ${toggleCard({ id: 'cleanupOnLeave', label: '퇴장 시 환영 메시지 회수', description: '멤버가 나가면 기존 환영 메시지를 정리해요.', checked: welcome.cleanupOnLeave !== false })}
+    </div>
     <div class="form-grid">
-      <label class="check-line"><input type="checkbox" id="welcomeEnabled" ${welcome.enabled ? 'checked' : ''}> 환영인사 켜기</label>
-      <label class="check-line"><input type="checkbox" id="cleanupOnLeave" ${welcome.cleanupOnLeave !== false ? 'checked' : ''}> 멤버가 나가면 기존 환영 메시지 회수</label>
       <label>환영 채널<select id="welcomeChannel">${optionList('text', welcome.channelId)}</select></label>
       <label>퇴장 카드 채널<select id="leaveChannel">${optionList('text', welcome.leaveChannelId || welcome.channelId)}</select></label>
-      <label>AI 환영 프롬프트<textarea id="aiPrompt" placeholder="새 멤버에게 어떤 분위기로 인사할지 적어줘">${esc(welcome.aiPrompt || '')}</textarea></label>
+      <label>AI 환영 프롬프트<textarea id="aiPrompt" placeholder="어떤 분위기로 환영할지 적어줘">${esc(welcome.aiPrompt || '')}</textarea></label>
       <label>고정 메시지<textarea id="welcomeMessage" placeholder="변수를 넣어 환영 문구를 적어줘">${esc(welcome.message || '')}</textarea></label>
     </div>
     <section class="tool-card"><h4>변수 삽입</h4><div class="chip-grid">${welcomeVariables.map((v) => `<button class="chip" data-insert="${esc(v)}" type="button">${esc(v)}</button>`).join('')}</div></section>
@@ -403,12 +416,15 @@ function renderWelcome() {
 function renderCommands() {
   const disabled = new Set(state.settings.disabledCommands || []);
   return `
-    <section class="section-title"><h3>명령어 켜고 끄기</h3><p>개발자/오너 전용 명령어는 제외하고 일반 기능 명령어만 제어해요.</p></section>
-    <div class="command-list dense">
-      ${commandList.map((cmd) => {
-        const enabled = !disabled.has(cmd.name);
-        return `<article class="command-card"><div><h4>/${esc(cmd.name)}</h4><p>${esc(cmd.description)}</p><small>${esc(cmd.group)}${cmd.heart ? ' · 프리미엄 하트' : ''}</small></div><label class="switch"><input type="checkbox" data-command="${esc(cmd.name)}" ${enabled ? 'checked' : ''}><span></span></label></article>`;
-      }).join('')}
+    <section class="section-title"><h3>명령어 켜고 끄기</h3><p>관리자 전용 명령어는 제외하고 일반 기능 명령어만 제어해요.</p></section>
+    <div class="toggle-grid dense">
+      ${commandList.map((cmd) => toggleCard({
+        id: `command-${cmd.name}`,
+        label: `/${cmd.name}`,
+        description: `${cmd.description} · ${cmd.group}${cmd.heart ? ' · 프리미엄 하트' : ''}`,
+        checked: !disabled.has(cmd.name),
+        data: `data-command="${esc(cmd.name)}"`,
+      })).join('')}
     </div>
     <div class="form-actions"><button class="primary-btn" data-action="save-commands" type="button">명령어 설정 저장</button></div>
   `;
@@ -417,9 +433,9 @@ function renderCommands() {
 function renderTts() {
   const tts = state.settings.tts || defaultSettings.tts;
   return `
-    <section class="section-title"><h3>TTS 관리</h3><p>대시보드에서 카테고리, 전용 채팅방, 음성방, 목소리를 관리해요.</p></section>
+    <section class="section-title"><h3>TTS 관리</h3><p>전용 채팅방에 글을 쓰면 나츠미가 음성채널에 들어가 읽어줘요.</p></section>
+    <div class="toggle-grid">${toggleCard({ id: 'ttsEnabled', label: 'TTS 켜기', description: '전용 채팅방 메시지를 음성으로 읽어요.', checked: Boolean(tts.enabled) })}</div>
     <div class="form-grid">
-      <label class="check-line"><input type="checkbox" id="ttsEnabled" ${tts.enabled ? 'checked' : ''}> TTS 켜기</label>
       <label>TTS 카테고리<select id="ttsCategory">${optionList('category', tts.categoryId)}</select></label>
       <label>TTS 채팅 채널<select id="ttsText">${optionList('text', tts.textChannelId)}</select></label>
       <label>읽어줄 음성 채널<select id="ttsVoiceChannel">${optionList('voice', tts.voiceChannelId)}</select></label>
@@ -432,9 +448,9 @@ function renderTts() {
 function renderEmoji() {
   const emoji = state.settings.emojiUpscale || defaultSettings.emojiUpscale;
   return `
-    <section class="section-title"><h3>이모지 업스케일</h3><p>반응 채널을 비워두면 모든 채널에서 이모지를 확장해요. 특정 채널에만 쓰고 싶을 때만 채널을 선택하세요.</p></section>
+    <section class="section-title"><h3>이미지 업스케일</h3><p>이모지를 크게 보여주는 기능을 관리해요.</p></section>
+    <div class="toggle-grid">${toggleCard({ id: 'emojiEnabled', label: '이모지 업스케일 켜기', description: '반응 채널을 비우면 모든 채널에서 작동해요.', checked: Boolean(emoji.enabled) })}</div>
     <div class="form-grid">
-      <label class="check-line"><input type="checkbox" id="emojiEnabled" ${emoji.enabled ? 'checked' : ''}> 이모지 업스케일 켜기</label>
       <label>반응 채널<select id="emojiChannel">${optionList('text', emoji.channelId, '모든 채널에서 자동 반응')}</select></label>
       <label>웹훅 표시 이름<input id="emojiWebhookName" value="${esc(emoji.webhookName || 'Natsumi Emoji Upscaler')}" /></label>
     </div>
@@ -443,20 +459,36 @@ function renderEmoji() {
 }
 
 function renderModeration() {
-  const moderation = state.settings.moderation || defaultSettings.moderation;
+  const moderation = { ...defaultSettings.moderation, ...(state.settings.moderation || {}) };
+  const whitelist = { ...defaultSettings.moderation.whitelist, ...(moderation.whitelist || {}) };
+  const antiRaid = { ...defaultSettings.moderation.antiRaid, ...(moderation.antiRaid || {}) };
   const words = Array.isArray(moderation.extraBadWords) ? moderation.extraBadWords.join('\n') : String(moderation.extraBadWords || '');
   return `
-    <section class="section-title"><h3>자동관리</h3><p>욕설/금지어를 감지해서 삭제, 경고, 타임아웃, 추방까지 자동으로 처리해요.</p></section>
+    <section class="section-title"><h3>자동관리</h3><p>켜기 전까지는 자동 처벌이 작동하지 않아요. 처음에는 로그만 남기기로 테스트하는 걸 추천해요.</p></section>
+    <div class="toggle-grid">
+      ${toggleCard({ id: 'moderationEnabled', label: '자동관리 켜기', description: '금지어와 자동 로그를 사용할 수 있어요.', checked: Boolean(moderation.enabled) })}
+      ${toggleCard({ id: 'badWordDetect', label: '욕설/금지어 감지', description: '설정한 금지어를 감지해요.', checked: Boolean(moderation.badWordDetect) })}
+      ${toggleCard({ id: 'deleteBadWord', label: '감지 메시지 삭제', description: '감지된 메시지를 바로 지워요.', checked: moderation.deleteMessage !== false })}
+      ${toggleCard({ id: 'warnBadWord', label: '감지 시 경고 추가', description: '감지된 유저에게 경고 1회를 추가해요.', checked: moderation.warnOnBadWord !== false })}
+      ${toggleCard({ id: 'antiRaidEnabled', label: '테러방지 켜기', description: '대량 생성/삭제/추방/차단을 감지해요.', checked: Boolean(antiRaid.enabled) })}
+      ${toggleCard({ id: 'suspiciousBotDetect', label: '봇 추가 감지', description: '의심스러운 봇 추가를 기록해요.', checked: antiRaid.suspiciousBotDetect !== false })}
+    </div>
     <div class="form-grid">
-      <label class="check-line"><input type="checkbox" id="moderationEnabled" ${moderation.enabled ? 'checked' : ''}> 자동관리 켜기</label>
-      <label class="check-line"><input type="checkbox" id="badWordDetect" ${moderation.badWordDetect ? 'checked' : ''}> 욕설/금지어 감지</label>
-      <label class="check-line"><input type="checkbox" id="deleteBadWord" ${moderation.deleteMessage !== false ? 'checked' : ''}> 감지된 메시지 삭제</label>
-      <label class="check-line"><input type="checkbox" id="warnBadWord" ${moderation.warnOnBadWord !== false ? 'checked' : ''}> 감지 시 경고 1회 추가</label>
-      <label>자동관리 로그 채널<select id="moderationLogChannel">${optionList('text', moderation.logChannelId)}</select></label>
+      <label>자동관리 로그 채널<select id="moderationLogChannel">${optionList('text', moderation.logChannelId, '자동 생성 또는 채널 선택')}</select></label>
+      <label>대응 방식<select id="antiRaidAction">${[['log', '로그만 남기기'], ['timeout', '타임아웃'], ['kick', '추방'], ['ban', '차단']].map(([value, label]) => `<option value="${value}" ${antiRaid.action === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
       <label>타임아웃 기준 경고 횟수<input id="timeoutThreshold" type="number" min="0" max="100" value="${Number(moderation.timeoutThreshold || 0)}" /></label>
       <label>타임아웃 시간(분)<input id="timeoutMinutes" type="number" min="1" max="40320" value="${Number(moderation.timeoutMinutes || 10)}" /></label>
       <label>추방 기준 경고 횟수<input id="kickThreshold" type="number" min="0" max="100" value="${Number(moderation.kickThreshold || 0)}" /></label>
+      <label>감지 시간 창(초)<input id="antiRaidWindow" type="number" min="5" max="300" value="${Number(antiRaid.windowSeconds || 15)}" /></label>
+      <label>대량 채널 생성 기준<input id="channelCreateLimit" type="number" min="1" max="100" value="${Number(antiRaid.channelCreateLimit || 5)}" /></label>
+      <label>대량 역할 삭제 기준<input id="roleDeleteLimit" type="number" min="1" max="100" value="${Number(antiRaid.roleDeleteLimit || 3)}" /></label>
+      <label>대량 멤버 추방 기준<input id="memberKickLimit" type="number" min="1" max="100" value="${Number(antiRaid.memberKickLimit || 5)}" /></label>
+      <label>대량 멤버 차단 기준<input id="memberBanLimit" type="number" min="1" max="100" value="${Number(antiRaid.memberBanLimit || 5)}" /></label>
+      <label>테러 대응 타임아웃(분)<input id="antiRaidTimeoutMinutes" type="number" min="1" max="1440" value="${Number(antiRaid.timeoutMinutes || 30)}" /></label>
       <label>추가 금지어<textarea id="extraBadWords" placeholder="한 줄에 하나씩 적어줘">${esc(words)}</textarea></label>
+      <label>예외 유저 ID<textarea id="whitelistUsers" placeholder="1293232804745838733">${esc((whitelist.users || []).join('\n'))}</textarea></label>
+      <label>예외 역할 ID<textarea id="whitelistRoles" placeholder="role id">${esc((whitelist.roles || []).join('\n'))}</textarea></label>
+      <label>예외 채널 ID<textarea id="whitelistChannels" placeholder="channel id">${esc((whitelist.channels || []).join('\n'))}</textarea></label>
     </div>
     <div class="form-actions"><button class="primary-btn" data-action="save-moderation" type="button">자동관리 저장</button></div>
   `;
@@ -474,8 +506,12 @@ function renderQna() {
   `;
 }
 
+function tabLabel(tab) {
+  return dashboardTabs.find(([key]) => key === tab)?.[1] || '공지사항';
+}
+
 function featureName(key) {
-  return ({ level: '레벨/랭크', welcome: '환영인사', ticket: '티켓', tts: 'TTS', ai: 'AI', shop: '웹상점', emojiUpscale: '이모지 업스케일' })[key] || key;
+  return ({ level: '레벨/랭크', welcome: '환영인사', ticket: '티켓', tts: 'TTS', ai: 'AI', shop: '웹상점', emojiUpscale: '이모지 업스케일', moderation: '자동관리', notice: '공지' })[key] || key;
 }
 
 function featureDesc(key) {
@@ -486,7 +522,8 @@ function featureDesc(key) {
     tts: '채팅을 음성으로 읽는 기능을 제어해요.',
     ai: 'AI 채팅과 그림 기능을 제어해요.',
     shop: '웹상점과 후원 보상 기능을 제어해요.',
-    emojiUpscale: '웹훅 이모지 확대 기능을 제어해요.',
+    emojiUpscale: '이모지 확대 기능을 제어해요.',
+    moderation: '자동관리와 테러방지를 제어해요.',
   })[key] || '서버 기능을 제어해요.';
 }
 
@@ -498,12 +535,9 @@ function optionList(type, selected = '', emptyLabel = null) {
 
 function voiceOptions(selected = '') {
   const generated = [
-    ...Array.from({ length: 20 }, (_, i) => [`ko_${String(i + 1).padStart(2, '0')}`, `한국어 보이스 ${i + 1} - ${i < 10 ? '여성' : '남성'} 안내`]),
-    ...Array.from({ length: 20 }, (_, i) => [`ja_${String(i + 1).padStart(2, '0')}`, `일본어 보이스 ${i + 1} - ${i < 10 ? '여성' : '남성'} 안내`]),
-    ...Array.from({ length: 20 }, (_, i) => [`anime_${String(i + 1).padStart(2, '0')}`, `애니 보이스 ${i + 1} - 캐릭터 톤`]),
+    ...voiceList,
+    ...Array.from({ length: 10 }, (_, i) => [`anime_${String(i + 1).padStart(2, '0')}`, `애니 보이스 ${i + 1} - 캐릭터톤`]),
   ];
-  generated[19] = ['Seoyeon', '한국어 기본 - 서연'];
-  generated[39] = ['Mizuki', '일본어 기본 - 미즈키'];
   return generated.map(([value, label]) => `<option value="${esc(value)}" ${value === selected ? 'selected' : ''}>${esc(label)}</option>`).join('');
 }
 
@@ -537,18 +571,29 @@ async function loadGuilds() {
 }
 
 async function loadSettings() {
-  if (!state.isOwner) {
+  if (!state.isOwner || currentGuild().botPresent === false) {
     state.settings = structuredClone(defaultSettings);
     return;
   }
   const guild = currentGuild();
   try {
     const data = await api(`/api/dashboard/guilds/${guild.id}/settings`);
-    state.settings = { ...structuredClone(defaultSettings), ...(data.settings || data) };
+    state.settings = deepMerge(structuredClone(defaultSettings), data.settings || data);
   } catch {
     const saved = localStorage.getItem(localKey(guild.id));
-    state.settings = saved ? { ...structuredClone(defaultSettings), ...JSON.parse(saved) } : structuredClone(defaultSettings);
+    state.settings = saved ? deepMerge(structuredClone(defaultSettings), JSON.parse(saved)) : structuredClone(defaultSettings);
   }
+}
+
+function deepMerge(base, extra) {
+  for (const [key, value] of Object.entries(extra || {})) {
+    if (value && typeof value === 'object' && !Array.isArray(value) && base[key] && typeof base[key] === 'object' && !Array.isArray(base[key])) {
+      base[key] = deepMerge({ ...base[key] }, value);
+    } else {
+      base[key] = value;
+    }
+  }
+  return base;
 }
 
 async function loadDeveloperAnnouncements() {
@@ -582,6 +627,10 @@ async function loadHeartStatus() {
 
 function formValue(selector) {
   return document.querySelector(selector)?.value?.trim() || '';
+}
+
+function formIdList(selector) {
+  return formValue(selector).split(/[\n,\s]+/).map((id) => id.trim()).filter(Boolean);
 }
 
 function collectSettingsFromDom() {
@@ -634,6 +683,22 @@ function collectSettingsFromDom() {
       timeoutMinutes: Number(formValue('#timeoutMinutes') || 10),
       kickThreshold: Number(formValue('#kickThreshold') || 0),
       extraBadWords: formValue('#extraBadWords').split(/\n|,/).map((word) => word.trim()).filter(Boolean),
+      whitelist: {
+        users: formIdList('#whitelistUsers'),
+        roles: formIdList('#whitelistRoles'),
+        channels: formIdList('#whitelistChannels'),
+      },
+      antiRaid: {
+        enabled: document.querySelector('#antiRaidEnabled')?.checked || false,
+        action: formValue('#antiRaidAction') || 'log',
+        windowSeconds: Number(formValue('#antiRaidWindow') || 15),
+        channelCreateLimit: Number(formValue('#channelCreateLimit') || 5),
+        roleDeleteLimit: Number(formValue('#roleDeleteLimit') || 3),
+        memberKickLimit: Number(formValue('#memberKickLimit') || 5),
+        memberBanLimit: Number(formValue('#memberBanLimit') || 5),
+        suspiciousBotDetect: document.querySelector('#suspiciousBotDetect')?.checked !== false,
+        timeoutMinutes: Number(formValue('#antiRaidTimeoutMinutes') || 30),
+      },
     };
     next.features = { ...next.features, moderation: next.moderation.enabled };
   }
@@ -642,8 +707,9 @@ function collectSettingsFromDom() {
 
 async function saveSettings() {
   if (!state.isOwner) return publicNoticePage();
+  if (currentGuild().botPresent === false) return toast('나츠미를 먼저 서버에 초대해줘.');
   if (premiumTabs.has(state.activeTab) && !state.heart.verified) {
-    toast('한디리 하트를 확인한 뒤 사용할 수 있어요.');
+    toast('한디리 하트를 확인해야 사용할 수 있어요.');
     return dashboard();
   }
   const guild = currentGuild();
@@ -652,9 +718,9 @@ async function saveSettings() {
   localStorage.setItem(localKey(guild.id), JSON.stringify(settings));
   try {
     await api(`/api/dashboard/guilds/${guild.id}/settings`, { method: 'PATCH', body: JSON.stringify({ settings }) });
-    toast('저장했어. 봇에 반영될 거야.');
+    toast('저장했어. 나츠미에 반영될 거야.');
   } catch {
-    toast('API 연결 전이라 브라우저에 임시 저장했어.');
+    toast('API 연결을 확인해줘. 브라우저에는 임시 저장했어.');
   }
 }
 
@@ -708,14 +774,20 @@ app.addEventListener('click', async (event) => {
   const target = event.target.closest('button');
   if (!target) return;
 
-  if (target.dataset.action === 'home') return state.isOwner ? dashboard() : publicNoticePage();
+  if (target.dataset.action === 'notice') {
+    state.activeTab = 'notice';
+    return state.isOwner ? dashboard() : publicNoticePage();
+  }
   if (target.dataset.action === 'login') return login();
+  if (target.dataset.action === 'toggle-menu') {
+    state.menuOpen = !state.menuOpen;
+    return state.isOwner ? dashboard() : publicNoticePage();
+  }
   if (target.dataset.action === 'refresh-public') {
     await Promise.all([loadSession(), loadDeveloperAnnouncements(), loadBotStatus()]);
     await loadHeartStatus();
     return state.isOwner ? dashboard() : publicNoticePage();
   }
-  if (target.dataset.action === 'owner-dashboard') return state.isOwner ? dashboard() : publicNoticePage();
   if (!state.isOwner) return publicNoticePage();
   if (target.dataset.action === 'refresh') {
     await Promise.all([loadSession(), loadGuilds(), loadDeveloperAnnouncements(), loadBotStatus()]);
@@ -729,6 +801,8 @@ app.addEventListener('click', async (event) => {
   }
   if (target.dataset.tab) {
     state.activeTab = target.dataset.tab;
+    state.menuOpen = false;
+    if (state.activeTab !== 'notice') await loadSettings();
     return dashboard();
   }
   if (target.dataset.insert) {
@@ -763,8 +837,14 @@ app.addEventListener('change', async (event) => {
   if (event.target.id === 'guildSelect' && state.isOwner) {
     state.selectedGuild = state.guilds.find((guild) => guild.id === event.target.value) || state.guilds[0];
     localStorage.setItem(selectedGuildKey, state.selectedGuild.id);
+    state.activeTab = state.selectedGuild.botPresent === false ? state.activeTab : 'notice';
     await loadSettings();
     dashboard();
+  }
+  if (event.target.closest('.toggle-card')) {
+    const card = event.target.closest('.toggle-card');
+    const em = card.querySelector('em');
+    if (em) em.textContent = event.target.checked ? '켜짐' : '꺼짐';
   }
 });
 
