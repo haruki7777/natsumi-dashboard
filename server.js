@@ -24,6 +24,10 @@ const KOREANBOTS_BOT_ID = process.env.KOREANBOTS_BOT_ID || DISCORD_CLIENT_ID || 
 const HEART_URL = process.env.KOREANBOTS_BOT_PAGE_URL || process.env.HANDIRI_HEART_URL || process.env.HEART_URL || `https://koreanbots.dev/bots/${KOREANBOTS_BOT_ID}`;
 const DISCORD_ADMINISTRATOR = 0x8n;
 const DISCORD_MANAGE_GUILD = 0x20n;
+const DISCORD_VIEW_CHANNEL = 0x400n;
+const DISCORD_SEND_MESSAGES = 0x800n;
+const DISCORD_CONNECT = 0x100000n;
+const DISCORD_SPEAK = 0x200000n;
 const distDir = path.join(__dirname, 'dist');
 mongoose.set('bufferCommands', false);
 
@@ -188,18 +192,77 @@ async function requireGuildAdmin(req, res, next) {
   return res.status(403).json({ error: 'Only server administrators can change this setting.' });
 }
 
-async function fetchBotGuildChannels(guildId) {
-  if (!DISCORD_BOT_TOKEN) return [];
-  const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/channels`, {
+async function fetchDiscordBot(pathname) {
+  if (!DISCORD_BOT_TOKEN) return null;
+  const res = await fetch(`https://discord.com/api/v10${pathname}`, {
     headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
   });
-  if (!res.ok) return [];
-  const channels = await res.json();
+  if (!res.ok) return null;
+  return res.json();
+}
+
+function computeBasePermissions(guild, member, roles) {
+  let permissions = BigInt(guild.permissions || 0);
+  const everyone = roles.find((role) => role.id === guild.id);
+  if (everyone?.permissions) permissions |= BigInt(everyone.permissions);
+  for (const roleId of member?.roles || []) {
+    const role = roles.find((item) => item.id === roleId);
+    if (role?.permissions) permissions |= BigInt(role.permissions);
+  }
+  if ((permissions & DISCORD_ADMINISTRATOR) === DISCORD_ADMINISTRATOR) return "ADMIN";
+  return permissions;
+}
+
+function applyChannelOverwrites(basePermissions, channel, member, guildId) {
+  if (basePermissions === "ADMIN") return basePermissions;
+  let permissions = basePermissions;
+  const overwrites = channel.permission_overwrites || [];
+  const everyone = overwrites.find((item) => item.id === guildId);
+  if (everyone) {
+    permissions &= ~BigInt(everyone.deny || 0);
+    permissions |= BigInt(everyone.allow || 0);
+  }
+  let roleAllow = 0n;
+  let roleDeny = 0n;
+  for (const overwrite of overwrites) {
+    if (overwrite.type !== 0 || !member?.roles?.includes(overwrite.id)) continue;
+    roleDeny |= BigInt(overwrite.deny || 0);
+    roleAllow |= BigInt(overwrite.allow || 0);
+  }
+  permissions &= ~roleDeny;
+  permissions |= roleAllow;
+  const memberOverwrite = overwrites.find((item) => item.type === 1 && item.id === member?.user?.id);
+  if (memberOverwrite) {
+    permissions &= ~BigInt(memberOverwrite.deny || 0);
+    permissions |= BigInt(memberOverwrite.allow || 0);
+  }
+  return permissions;
+}
+
+function canUseChannel(permissions, type) {
+  if (permissions === "ADMIN") return true;
+  if ((permissions & DISCORD_VIEW_CHANNEL) !== DISCORD_VIEW_CHANNEL) return false;
+  if (type === 'text') return (permissions & DISCORD_SEND_MESSAGES) === DISCORD_SEND_MESSAGES;
+  if (type === 'voice') return (permissions & DISCORD_CONNECT) === DISCORD_CONNECT && (permissions & DISCORD_SPEAK) === DISCORD_SPEAK;
+  return true;
+}
+
+async function fetchBotGuildChannels(guild, userId) {
+  const guildId = guild.id;
+  if (!DISCORD_BOT_TOKEN) return [];
+  const [channels, roles, member] = await Promise.all([
+    fetchDiscordBot(`/guilds/${guildId}/channels`),
+    fetchDiscordBot(`/guilds/${guildId}/roles`),
+    fetchDiscordBot(`/guilds/${guildId}/members/${userId}`),
+  ]);
+  if (!Array.isArray(channels)) return [];
+  const basePermissions = computeBasePermissions(guild, member, Array.isArray(roles) ? roles : []);
   return channels.map((channel) => ({
     id: channel.id,
     name: channel.name,
     parentId: channel.parent_id || null,
     type: channel.type === 0 ? 'text' : channel.type === 2 ? 'voice' : channel.type === 4 ? 'category' : 'other',
+    manageable: canUseChannel(applyChannelOverwrites(basePermissions, channel, member, guildId), channel.type === 0 ? 'text' : channel.type === 2 ? 'voice' : 'category'),
   })).filter((channel) => channel.type !== 'other');
 }
 
@@ -389,7 +452,7 @@ app.post('/api/developer-announcements', requireLogin, requireOwner, async (req,
 app.get('/api/dashboard/guilds', requireLogin, requireOwner, async (req, res) => {
   const manageable = (await fetchUserGuilds(req)).filter(isGuildAdmin);
   const guilds = await Promise.all(manageable.map(async (guild) => {
-    const channels = await fetchBotGuildChannels(guild.id);
+    const channels = await fetchBotGuildChannels(guild, req.session.discordUser.id);
     return {
       id: guild.id,
       name: guild.name,

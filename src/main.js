@@ -35,6 +35,22 @@ const commandList = [
 ].map(([name, description, group, heart]) => ({ name, description, group, heart }));
 
 const voiceList = [
+  ['clova_nara_bright', '클로바 - 나라 밝은 안내'],
+  ['clova_nara_soft', '클로바 - 나라 부드러운 친구'],
+  ['clova_vyuna_lovely', '클로바 - 유나 러블리'],
+  ['clova_vhyeri_cheerful', '클로바 - 혜리 활기찬 진행'],
+  ['clova_vgoeun_clear', '클로바 - 고은 또렷한 안내'],
+  ['clova_vdain_calm', '클로바 - 다인 차분한 선배'],
+  ['clova_vmikyung_warm', '클로바 - 미경 따뜻한 방송'],
+  ['clova_vian_young', '클로바 - 이안 소년 캐릭터'],
+  ['clova_vdaeseong_hero', '클로바 - 대성 히어로'],
+  ['clova_dara_danna_bilingual', '클로바 - 아라&안나 한영'],
+  ['clova_dmio_anime', '클로바 - 미오 일본 애니'],
+  ['clova_dnaomi_joyful', '클로바 - 나오미 즐거움'],
+  ['clova_dnaomi_news', '클로바 - 나오미 뉴스'],
+  ['clova_dsayuri', '클로바 - 사유리 맑은 톤'],
+  ['clova_driko', '클로바 - 리코 캐릭터'],
+  ['clova_dayumu', '클로바 - 아유무 소년'],
   ['voicevox_zundamon_normal', '무료 애니 - 즌다몬 기본'],
   ['voicevox_zundamon_sweet', '무료 애니 - 즌다몬 달콤'],
   ['voicevox_zundamon_tsundere', '무료 애니 - 즌다몬 츤데레'],
@@ -108,7 +124,7 @@ const defaultSettings = {
   disabledCommands: [],
   features: { welcome: false, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false, moderation: false },
   welcome: { enabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해!', aiPrompt: '' },
-  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'voicevox_zundamon_normal' },
+  tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'clova_nara_bright' },
   emojiUpscale: { enabled: false, channelId: '', webhookName: 'Natsumi Emoji Upscaler' },
   moderation: {
     enabled: false,
@@ -195,7 +211,11 @@ function botInviteUrl() {
 }
 
 function channels() {
-  return currentGuild().channels || [];
+  return (currentGuild().channels || []).filter((channel) => channel.manageable !== false);
+}
+
+function manageableGuilds() {
+  return (state.guilds || []).filter((guild) => guild.manageable !== false);
 }
 
 function localKey(guildId) {
@@ -284,7 +304,10 @@ function dashboard() {
       <section class="main glass">
         <header class="main-head">
           <div><p class="eyebrow">${state.activeTab === 'notice' ? 'Notice' : 'Dashboard'}</p><h2>${state.activeTab === 'notice' ? '공지사항' : esc(tabLabel(state.activeTab))}</h2></div>
-          <button class="soft-btn" data-action="refresh" type="button">새로고침</button>
+          <div class="main-actions">
+            <button class="soft-btn" data-action="toggle-menu" type="button">${state.menuOpen ? '메뉴 닫기' : '메뉴 열기'}</button>
+            <button class="soft-btn" data-action="refresh" type="button">새로고침</button>
+          </div>
         </header>
         <div id="panel">${renderPanel()}</div>
       </section>
@@ -303,7 +326,7 @@ function renderMenuDrawer() {
       </div>
       <label class="select-label">서버 선택</label>
       <select class="wide-select" id="guildSelect">
-        ${state.guilds.map((g) => `<option value="${esc(g.id)}" ${g.id === guild.id ? 'selected' : ''} ${g.botPresent === false ? 'data-missing-bot="1"' : ''}>${esc(g.name)}${g.botPresent === false ? ' · 나츠미 초대 필요' : ''}</option>`).join('')}
+        ${manageableGuilds().map((g) => `<option value="${esc(g.id)}" ${g.id === guild.id ? 'selected' : ''} ${g.botPresent === false ? 'data-missing-bot="1"' : ''}>${esc(g.name)}${g.botPresent === false ? ' · 나츠미 초대 필요' : ''}</option>`).join('')}
       </select>
       <div class="menu-list">
         <button class="menu-tile ${state.activeTab === 'notice' ? 'active' : ''}" data-tab="notice" type="button">공지사항</button>
@@ -580,12 +603,13 @@ async function loadGuilds() {
   }
   try {
     const data = await api('/api/dashboard/guilds');
-    state.guilds = data.guilds?.length ? data.guilds : fallbackGuilds;
+    const guilds = data.guilds?.length ? data.guilds : fallbackGuilds;
+    state.guilds = guilds.filter((guild) => guild.manageable !== false);
   } catch {
     state.guilds = fallbackGuilds;
   }
   const saved = localStorage.getItem(selectedGuildKey);
-  state.selectedGuild = state.guilds.find((guild) => guild.id === saved) || state.guilds[0];
+  state.selectedGuild = state.guilds.find((guild) => guild.id === saved) || state.guilds[0] || fallbackGuilds[0];
 }
 
 async function loadSettings() {
@@ -678,7 +702,7 @@ function collectSettingsFromDom() {
       categoryId: formValue('#ttsCategory'),
       textChannelId: formValue('#ttsText'),
       voiceChannelId: formValue('#ttsVoiceChannel'),
-      voice: formValue('#ttsVoice') || 'voicevox_zundamon_normal',
+      voice: formValue('#ttsVoice') || 'clova_nara_bright',
     };
   }
   if (state.activeTab === 'emoji') {
@@ -853,7 +877,7 @@ app.addEventListener('change', async (event) => {
     return state.isOwner ? dashboard() : publicNoticePage();
   }
   if (event.target.id === 'guildSelect' && state.isOwner) {
-    state.selectedGuild = state.guilds.find((guild) => guild.id === event.target.value) || state.guilds[0];
+    state.selectedGuild = manageableGuilds().find((guild) => guild.id === event.target.value) || manageableGuilds()[0] || fallbackGuilds[0];
     localStorage.setItem(selectedGuildKey, state.selectedGuild.id);
     state.activeTab = state.selectedGuild.botPresent === false ? state.activeTab : 'notice';
     await loadSettings();
