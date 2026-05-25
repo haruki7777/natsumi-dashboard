@@ -15,13 +15,20 @@ const SITE_URL = (process.env.SITE_URL || 'https://natsumi-site.kro.kr/').replac
 const GAME_URL = (process.env.GAME_URL || 'http://natsumi-game.kro.kr:25772/').replace(/\/$/, '') + '/';
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.TOKEN || '';
+const NATSUMI_BOT_TOKEN = process.env.NATSUMI_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN || process.env.TOKEN || '';
+const YUZUHA_BOT_TOKEN = process.env.YUZUHA_BOT_TOKEN || process.env.YUZUHA_TOKEN || '';
+const NATSUMI_BOT_ID = process.env.NATSUMI_BOT_ID || process.env.NATSUMI_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '905355491708903485';
+const YUZUHA_BOT_ID = process.env.YUZUHA_BOT_ID || process.env.YUZUHA_CLIENT_ID || '1508101246723035196';
 const BOT_STATUS_URL = process.env.BOT_STATUS_URL || process.env.NATSUMI_BOT_STATUS_URL || process.env.BOT_API_URL || '';
 const OWNER_USER_ID = process.env.OWNER_USER_ID || process.env.NATSUMI_OWNER_ID || '1293232804745838733';
 const DEVELOPER_NOTICE_CHANNEL_ID = process.env.DEVELOPER_NOTICE_CHANNEL_ID || '1371675674393448528';
 const KOREANBOTS_TOKEN = process.env.KOREANBOTS_TOKEN || '';
 const KOREANBOTS_BOT_ID = process.env.KOREANBOTS_BOT_ID || DISCORD_CLIENT_ID || '905355491708903485';
 const HEART_URL = process.env.KOREANBOTS_BOT_PAGE_URL || process.env.HANDIRI_HEART_URL || process.env.HEART_URL || `https://koreanbots.dev/bots/${KOREANBOTS_BOT_ID}`;
+const BOT_PROFILES = {
+  natsumi: { key: 'natsumi', name: 'Natsumi', botId: NATSUMI_BOT_ID, token: NATSUMI_BOT_TOKEN },
+  yuzuha: { key: 'yuzuha', name: 'Yuzuha', botId: YUZUHA_BOT_ID, token: YUZUHA_BOT_TOKEN },
+};
 const DISCORD_ADMINISTRATOR = 0x8n;
 const DISCORD_MANAGE_GUILD = 0x20n;
 const DISCORD_VIEW_CHANNEL = 0x400n;
@@ -33,6 +40,7 @@ mongoose.set('bufferCommands', false);
 
 const DashboardSettings = model('DashboardSettings', new Schema({
   guildId: { type: String, required: true, unique: true, index: true },
+  bots: { type: Schema.Types.Mixed, default: {} },
   disabledCommands: { type: [String], default: [] },
   features: {
     welcome: { type: Boolean, default: false },
@@ -52,6 +60,34 @@ const DashboardSettings = model('DashboardSettings', new Schema({
   emojiUpscale: { type: Schema.Types.Mixed, default: {} },
   moderation: { type: Schema.Types.Mixed, default: {} },
 }, { timestamps: true }));
+
+function normalizeBotKey(value) {
+  return value === 'yuzuha' ? 'yuzuha' : 'natsumi';
+}
+
+function requestedBotKey(req) {
+  return normalizeBotKey(req.query?.bot || req.body?.bot || 'natsumi');
+}
+
+function baseSettingsFromDoc(doc) {
+  return {
+    disabledCommands: doc?.disabledCommands || [],
+    features: doc?.features || {},
+    welcome: doc?.welcome || {},
+    yuzuha: doc?.yuzuha || {},
+    notice: doc?.notice || {},
+    tts: doc?.tts || {},
+    emojiUpscale: doc?.emojiUpscale || {},
+    moderation: doc?.moderation || {},
+  };
+}
+
+function settingsForBot(doc, botKey) {
+  const scoped = doc?.bots?.[botKey];
+  if (scoped && typeof scoped === 'object') return scoped;
+  if (botKey === 'natsumi') return baseSettingsFromDoc(doc);
+  return {};
+}
 
 const DashboardNotice = model('DashboardNotice', new Schema({
   guildId: String,
@@ -193,10 +229,11 @@ async function requireGuildAdmin(req, res, next) {
   return res.status(403).json({ error: 'Only server administrators can change this setting.' });
 }
 
-async function fetchDiscordBot(pathname) {
-  if (!DISCORD_BOT_TOKEN) return null;
+async function fetchDiscordBot(pathname, botKey = 'natsumi') {
+  const token = BOT_PROFILES[normalizeBotKey(botKey)]?.token;
+  if (!token) return null;
   const res = await fetch(`https://discord.com/api/v10${pathname}`, {
-    headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
+    headers: { Authorization: `Bot ${token}` },
   });
   if (!res.ok) return null;
   return res.json();
@@ -248,13 +285,14 @@ function canUseChannel(permissions, type) {
   return true;
 }
 
-async function fetchBotGuildChannels(guild, userId) {
+async function fetchBotGuildChannels(guild, userId, botKey = 'natsumi') {
   const guildId = guild.id;
-  if (!DISCORD_BOT_TOKEN) return [];
+  const token = BOT_PROFILES[normalizeBotKey(botKey)]?.token;
+  if (!token) return [];
   const [channels, roles, member] = await Promise.all([
-    fetchDiscordBot(`/guilds/${guildId}/channels`),
-    fetchDiscordBot(`/guilds/${guildId}/roles`),
-    fetchDiscordBot(`/guilds/${guildId}/members/${userId}`),
+    fetchDiscordBot(`/guilds/${guildId}/channels`, botKey),
+    fetchDiscordBot(`/guilds/${guildId}/roles`, botKey),
+    fetchDiscordBot(`/guilds/${guildId}/members/${userId}`, botKey),
   ]);
   if (!Array.isArray(channels)) return [];
   const basePermissions = computeBasePermissions(guild, member, Array.isArray(roles) ? roles : []);
@@ -267,11 +305,12 @@ async function fetchBotGuildChannels(guild, userId) {
   })).filter((channel) => channel.type !== 'other');
 }
 
-async function sendGuildNoticeMessage(channelId, message) {
-  if (!DISCORD_BOT_TOKEN || !channelId || !message) return { ok: false, error: 'missing channel or token' };
+async function sendGuildNoticeMessage(channelId, message, botKey = 'natsumi') {
+  const token = BOT_PROFILES[normalizeBotKey(botKey)]?.token;
+  if (!token || !channelId || !message) return { ok: false, error: 'missing channel or token' };
   const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
     method: 'POST',
-    headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bot ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       embeds: [{
         title: 'NATSUMI 공지',
@@ -287,8 +326,8 @@ async function sendGuildNoticeMessage(channelId, message) {
 }
 
 async function sendDeveloperAnnouncement(row) {
-  if (!DISCORD_BOT_TOKEN || !DEVELOPER_NOTICE_CHANNEL_ID) return { ok: false, error: 'missing Discord token or channel' };
-  const headers = { Authorization: `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' };
+  if (!NATSUMI_BOT_TOKEN || !DEVELOPER_NOTICE_CHANNEL_ID) return { ok: false, error: 'missing Discord token or channel' };
+  const headers = { Authorization: `Bot ${NATSUMI_BOT_TOKEN}`, 'Content-Type': 'application/json' };
   const payload = {
     username: 'NATSUMI 공지',
     avatar_url: `${DASHBOARD_URL}natsumi-profile-03.jpg`,
@@ -364,16 +403,18 @@ app.get('/api/heart-status', requireLogin, async (req, res) => {
   const verified = isOwner(req) || await checkKoreanBotsVote(req.session.discordUser.id);
   res.json({ verified, heartUrl: HEART_URL });
 });
-app.get('/api/bot-status', async (_req, res) => {
+app.get('/api/bot-status', async (req, res) => {
+  const botKey = requestedBotKey(req);
+  const profile = BOT_PROFILES[botKey];
   let bot = null;
   let botReady = false;
   let botApiOk = false;
   let botRuntimeStatus = null;
   let liveGuildCount = null;
-  if (DISCORD_BOT_TOKEN) {
+  if (profile?.token) {
     try {
       const botRes = await fetch('https://discord.com/api/v10/users/@me', {
-        headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
+        headers: { Authorization: `Bot ${profile.token}` },
       });
       if (botRes.ok) {
         bot = await botRes.json();
@@ -406,9 +447,10 @@ app.get('/api/bot-status', async (_req, res) => {
   const guildCount = liveGuildCount || (Number.isFinite(configuredGuildCount) && configuredGuildCount > 0 ? configuredGuildCount : null);
   res.json({
     apiOk: true,
-    botId: bot?.id || KOREANBOTS_BOT_ID || null,
+    botKey,
+    botId: bot?.id || profile?.botId || null,
     botReady,
-    botName: bot?.username || 'NATSUMI',
+    botName: bot?.username || profile?.name || 'BOT',
     botApiOk,
     botRuntimeStatus,
     guildCount,
@@ -417,6 +459,16 @@ app.get('/api/bot-status', async (_req, res) => {
 });
 
 app.get('/api/dashboard/session', (req, res) => res.json({ user: req.session?.discordUser || null, isOwner: isOwner(req) }));
+app.get('/api/dashboard/bots', (_req, res) => {
+  res.json({
+    bots: Object.values(BOT_PROFILES).map((bot) => ({
+      key: bot.key,
+      name: bot.name,
+      botId: bot.botId,
+      enabled: Boolean(bot.token),
+    })),
+  });
+});
 app.get('/api/developer-announcements', async (_req, res) => {
   const rows = await DeveloperAnnouncement.find().sort({ createdAt: -1 }).limit(10).lean();
   res.json({ announcements: rows.map((row) => ({
@@ -451,9 +503,10 @@ app.post('/api/developer-announcements', requireLogin, requireOwner, async (req,
 });
 
 app.get('/api/dashboard/guilds', requireLogin, requireOwner, async (req, res) => {
+  const botKey = requestedBotKey(req);
   const manageable = (await fetchUserGuilds(req)).filter(isGuildAdmin);
   const guilds = await Promise.all(manageable.map(async (guild) => {
-    const channels = await fetchBotGuildChannels(guild, req.session.discordUser.id);
+    const channels = await fetchBotGuildChannels(guild, req.session.discordUser.id, botKey);
     return {
       id: guild.id,
       name: guild.name,
@@ -463,29 +516,43 @@ app.get('/api/dashboard/guilds', requireLogin, requireOwner, async (req, res) =>
       channels,
     };
   }));
-  res.json({ guilds });
+  res.json({ guilds, bot: { key: botKey, botId: BOT_PROFILES[botKey]?.botId || null, name: BOT_PROFILES[botKey]?.name || 'Bot' } });
 });
 
 app.get('/api/dashboard/guilds/:guildId/settings', requireLogin, requireOwner, requireGuildAdmin, async (req, res) => {
+  const botKey = requestedBotKey(req);
   const settings = await DashboardSettings.findOneAndUpdate(
     { guildId: req.params.guildId },
     { $setOnInsert: { guildId: req.params.guildId } },
     { upsert: true, new: true }
   ).lean();
-  res.json({ settings });
+  res.json({ botKey, settings: settingsForBot(settings, botKey) });
 });
 
 app.patch('/api/dashboard/guilds/:guildId/settings', requireLogin, requireOwner, requireGuildAdmin, async (req, res) => {
+  const botKey = requestedBotKey(req);
   const next = req.body?.settings || {};
-  const settings = await DashboardSettings.findOneAndUpdate(
+  const update = { [`bots.${botKey}`]: next, guildId: req.params.guildId };
+  if (botKey === 'natsumi') {
+    update.disabledCommands = next.disabledCommands || [];
+    update.features = next.features || {};
+    update.welcome = next.welcome || {};
+    update.yuzuha = next.yuzuha || {};
+    update.notice = next.notice || {};
+    update.tts = next.tts || {};
+    update.emojiUpscale = next.emojiUpscale || {};
+    update.moderation = next.moderation || {};
+  }
+  await DashboardSettings.findOneAndUpdate(
     { guildId: req.params.guildId },
-    { $set: { ...next, guildId: req.params.guildId } },
+    { $set: update },
     { upsert: true, new: true }
   ).lean();
-  res.json({ ok: true, settings });
+  res.json({ ok: true, botKey, settings: next });
 });
 
 app.post('/api/dashboard/guilds/:guildId/notice', requireLogin, requireOwner, requireGuildAdmin, async (req, res) => {
+  const botKey = requestedBotKey(req);
   const message = String(req.body?.notice?.message || '').trim().slice(0, 1800);
   const channelId = String(req.body?.notice?.channelId || '').trim();
   if (!message) return res.status(400).json({ error: '공지 내용이 비어 있어.' });
@@ -497,7 +564,7 @@ app.post('/api/dashboard/guilds/:guildId/notice', requireLogin, requireOwner, re
     authorId: req.session.discordUser.id,
     authorName: req.session.discordUser.globalName || req.session.discordUser.username,
   });
-  const sent = await sendGuildNoticeMessage(channelId, message);
+  const sent = await sendGuildNoticeMessage(channelId, message, botKey);
   if (sent.ok) await DashboardNotice.updateOne({ _id: row._id }, { $set: { sentMessageId: sent.messageId } });
   res.json({ ok: sent.ok, notice: row, messageId: sent.messageId, error: sent.error });
 });

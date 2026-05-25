@@ -6,6 +6,7 @@ const API_BASE = (import.meta.env.VITE_API_BASE_URL || (isLocalPreview ? window.
 const NATSUMI_PROFILE_IMAGE = '/natsumi-profile-03.jpg';
 const themeKey = 'natsumi-dashboard-theme';
 const selectedGuildKey = 'natsumi-dashboard-selected-guild';
+const selectedBotKey = 'natsumi-dashboard-selected-bot';
 const app = document.getElementById('app');
 
 const commandList = [
@@ -161,6 +162,8 @@ const state = {
   isOwner: false,
   announcements: [],
   botStatus: null,
+  bots: [{ key: 'natsumi', name: 'Natsumi', botId: '905355491708903485', enabled: true }],
+  selectedBot: localStorage.getItem(selectedBotKey) || 'natsumi',
   heart: { verified: false, heartUrl: 'https://koreanbots.dev/bots/905355491708903485' },
 };
 
@@ -178,6 +181,19 @@ async function api(path, options = {}) {
   return res.status === 204 ? {} : res.json();
 }
 
+function currentBotKey() {
+  return state.selectedBot === 'yuzuha' ? 'yuzuha' : 'natsumi';
+}
+
+function withBot(path) {
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}bot=${encodeURIComponent(currentBotKey())}`;
+}
+
+function currentBotProfile() {
+  return state.bots.find((bot) => bot.key === currentBotKey()) || state.bots[0] || { key: 'natsumi', name: 'Natsumi', botId: '905355491708903485' };
+}
+
 function applyTheme(next = state.theme) {
   state.theme = next;
   localStorage.setItem(themeKey, state.theme);
@@ -193,7 +209,7 @@ function currentGuild() {
 }
 
 function botInviteUrl() {
-  const botId = state.botStatus?.botId || '905355491708903485';
+  const botId = state.botStatus?.botId || currentBotProfile().botId || '905355491708903485';
   return `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(botId)}&permissions=8&scope=bot%20applications.commands`;
 }
 
@@ -206,7 +222,7 @@ function manageableGuilds() {
 }
 
 function localKey(guildId) {
-  return `natsumi-dashboard-settings-${guildId}`;
+  return `natsumi-dashboard-settings-${currentBotKey()}-${guildId}`;
 }
 
 function avatarUrl() {
@@ -233,7 +249,7 @@ function shell(content) {
       ${renderPetals()}
       <header class="topbar glass">
         <button class="brand" data-action="notice" type="button">
-          <span><img src="${NATSUMI_PROFILE_IMAGE}" alt="" /></span><b>NATSUMI</b>
+          <span><img src="${NATSUMI_PROFILE_IMAGE}" alt="" /></span><b>${esc((currentBotProfile().name || 'NATSUMI').toUpperCase())}</b>
         </button>
         <div class="top-actions">
           <label class="mode-toggle" title="Theme">
@@ -312,8 +328,12 @@ function renderMenuDrawer() {
         <div><b>${esc(state.profile?.globalName || state.profile?.username || 'yukiha_haruki')}</b><small>관리자 모드</small></div>
       </div>
       <label class="select-label">서버 선택</label>
+      <select class="wide-select" id="botSelect">
+        ${state.bots.filter((b) => b.enabled !== false).map((b) => `<option value="${esc(b.key)}" ${b.key === currentBotKey() ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}
+      </select>
+      <label class="select-label">길드 선택</label>
       <select class="wide-select" id="guildSelect">
-        ${manageableGuilds().map((g) => `<option value="${esc(g.id)}" ${g.id === guild.id ? 'selected' : ''} ${g.botPresent === false ? 'data-missing-bot="1"' : ''}>${esc(g.name)}${g.botPresent === false ? ' · 나츠미 초대 필요' : ''}</option>`).join('')}
+        ${manageableGuilds().map((g) => `<option value="${esc(g.id)}" ${g.id === guild.id ? 'selected' : ''} ${g.botPresent === false ? 'data-missing-bot="1"' : ''}>${esc(g.name)}${g.botPresent === false ? ` · ${esc(currentBotProfile().name)} 초대 필요` : ''}</option>`).join('')}
       </select>
       <div class="menu-list">
         <button class="menu-tile ${state.activeTab === 'notice' ? 'active' : ''}" data-tab="notice" type="button">공지사항</button>
@@ -339,12 +359,13 @@ function renderPanel() {
 }
 
 function renderInviteRequired(guild) {
+  const botName = currentBotProfile().name;
   return `
     <section class="tool-card invite-required">
-      <h3>나츠미를 먼저 초대해야 해요</h3>
-      <p>${esc(guild.name)} 서버는 관리자 권한은 확인됐지만, 나츠미가 아직 들어가 있지 않거나 채널 정보를 읽을 수 없어요. 나츠미를 초대한 뒤 다시 새로고침해줘.</p>
+      <h3>${esc(botName)}를 먼저 초대해야 해요</h3>
+      <p>${esc(guild.name)} 서버는 관리자 권한은 확인됐지만, ${esc(botName)}가 아직 들어가 있지 않거나 채널 정보를 읽을 수 없어요. ${esc(botName)}를 초대한 뒤 다시 새로고침해줘.</p>
       <div class="form-actions">
-        <a class="primary-btn" href="${botInviteUrl()}" target="_blank" rel="noreferrer">나츠미 초대하기</a>
+        <a class="primary-btn" href="${botInviteUrl()}" target="_blank" rel="noreferrer">${esc(botName)} 초대하기</a>
         <button class="soft-btn" data-action="refresh" type="button">다시 확인</button>
       </div>
     </section>
@@ -596,6 +617,23 @@ async function loadSession() {
   }
 }
 
+async function loadBots() {
+  try {
+    const data = await api('/api/dashboard/bots');
+    const bots = Array.isArray(data.bots) && data.bots.length
+      ? data.bots
+      : [{ key: 'natsumi', name: 'Natsumi', botId: '905355491708903485', enabled: true }];
+    state.bots = bots;
+    if (!bots.some((bot) => bot.key === state.selectedBot && bot.enabled !== false)) {
+      state.selectedBot = bots.find((bot) => bot.enabled !== false)?.key || 'natsumi';
+    }
+    localStorage.setItem(selectedBotKey, state.selectedBot);
+  } catch {
+    state.bots = [{ key: 'natsumi', name: 'Natsumi', botId: '905355491708903485', enabled: true }];
+    state.selectedBot = 'natsumi';
+  }
+}
+
 async function loadGuilds() {
   if (!state.isOwner) {
     state.guilds = [];
@@ -603,7 +641,7 @@ async function loadGuilds() {
     return;
   }
   try {
-    const data = await api('/api/dashboard/guilds');
+    const data = await api(withBot('/api/dashboard/guilds'));
     const guilds = data.guilds?.length ? data.guilds : fallbackGuilds;
     state.guilds = guilds.filter((guild) => guild.manageable !== false);
   } catch {
@@ -620,7 +658,7 @@ async function loadSettings() {
   }
   const guild = currentGuild();
   try {
-    const data = await api(`/api/dashboard/guilds/${guild.id}/settings`);
+    const data = await api(withBot(`/api/dashboard/guilds/${guild.id}/settings`));
     state.settings = deepMerge(structuredClone(defaultSettings), data.settings || data);
   } catch {
     const saved = localStorage.getItem(localKey(guild.id));
@@ -650,7 +688,7 @@ async function loadDeveloperAnnouncements() {
 
 async function loadBotStatus() {
   try {
-    state.botStatus = await api('/api/bot-status');
+    state.botStatus = await api(withBot('/api/bot-status'));
   } catch {
     state.botStatus = { apiOk: false };
   }
@@ -761,7 +799,7 @@ function collectSettingsFromDom() {
 
 async function saveSettings() {
   if (!state.isOwner) return publicNoticePage();
-  if (currentGuild().botPresent === false) return toast('나츠미를 먼저 서버에 초대해줘.');
+  if (currentGuild().botPresent === false) return toast(`${currentBotProfile().name}를 먼저 서버에 초대해줘.`);
   if (premiumTabs.has(state.activeTab) && !state.heart.verified) {
     toast('한디리 하트를 확인해야 사용할 수 있어요.');
     return dashboard();
@@ -771,8 +809,8 @@ async function saveSettings() {
   state.settings = settings;
   localStorage.setItem(localKey(guild.id), JSON.stringify(settings));
   try {
-    await api(`/api/dashboard/guilds/${guild.id}/settings`, { method: 'PATCH', body: JSON.stringify({ settings }) });
-    toast('저장했어. 나츠미에 반영될 거야.');
+    await api(withBot(`/api/dashboard/guilds/${guild.id}/settings`), { method: 'PATCH', body: JSON.stringify({ bot: currentBotKey(), settings }) });
+    toast(`저장했어. ${currentBotProfile().name} 설정에 반영될 거야.`);
   } catch {
     toast('API 연결을 확인해줘. 브라우저에는 임시 저장했어.');
   }
@@ -838,13 +876,13 @@ app.addEventListener('click', async (event) => {
     return state.isOwner ? dashboard() : publicNoticePage();
   }
   if (target.dataset.action === 'refresh-public') {
-    await Promise.all([loadSession(), loadDeveloperAnnouncements(), loadBotStatus()]);
+    await Promise.all([loadSession(), loadBots(), loadDeveloperAnnouncements(), loadBotStatus()]);
     await loadHeartStatus();
     return state.isOwner ? dashboard() : publicNoticePage();
   }
   if (!state.isOwner) return publicNoticePage();
   if (target.dataset.action === 'refresh') {
-    await Promise.all([loadSession(), loadGuilds(), loadDeveloperAnnouncements(), loadBotStatus()]);
+    await Promise.all([loadSession(), loadBots(), loadGuilds(), loadDeveloperAnnouncements(), loadBotStatus()]);
     await loadHeartStatus();
     await loadSettings();
     return dashboard();
@@ -895,6 +933,13 @@ app.addEventListener('change', async (event) => {
     await loadSettings();
     dashboard();
   }
+  if (event.target.id === 'botSelect' && state.isOwner) {
+    state.selectedBot = event.target.value === 'yuzuha' ? 'yuzuha' : 'natsumi';
+    localStorage.setItem(selectedBotKey, state.selectedBot);
+    await Promise.all([loadGuilds(), loadBotStatus()]);
+    await loadSettings();
+    dashboard();
+  }
   if (event.target.closest('.toggle-card')) {
     const card = event.target.closest('.toggle-card');
     const em = card.querySelector('em');
@@ -903,9 +948,10 @@ app.addEventListener('change', async (event) => {
 });
 
 applyTheme();
-await Promise.all([loadSession(), loadDeveloperAnnouncements(), loadBotStatus()]);
+await Promise.all([loadSession(), loadBots(), loadDeveloperAnnouncements(), loadBotStatus()]);
 await loadHeartStatus();
 if (state.isOwner) {
+  await loadBots();
   await loadGuilds();
   await loadSettings();
   dashboard();
