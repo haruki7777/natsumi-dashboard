@@ -110,6 +110,7 @@ const defaultSettings = {
   disabledCommands: [],
   features: { welcome: false, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false, moderation: false },
   welcome: { enabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해!', aiPrompt: '' },
+  yuzuha: { enabled: false, dmWelcomeEnabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '유즈하가 인사할게요, {user.mention}! {server.name}에 온 걸 환영해요.', dmMessage: '안녕하세요, {user.name}! {server.name}에 와줘서 고마워요.', aiPrompt: '' },
   tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'edge_ko_sunhi' },
   emojiUpscale: { enabled: false, channelId: '', webhookName: 'Natsumi Emoji Upscaler' },
   moderation: {
@@ -420,6 +421,7 @@ function renderSettings() {
 
 function renderWelcome() {
   const welcome = state.settings.welcome || defaultSettings.welcome;
+  const yuzuha = state.settings.yuzuha || defaultSettings.yuzuha;
   return `
     <section class="section-title"><h3>환영인사</h3><p>입장 카드와 환영 멘트를 관리해요.</p></section>
     <div class="toggle-grid">
@@ -437,6 +439,19 @@ function renderWelcome() {
       <div class="split-head"><h4>샘플 템플릿 11개</h4><button class="ghost-btn" data-action="clear-template" type="button">모두 지우기</button></div>
       <div class="template-grid">${sampleTemplates.map(([name, text]) => `<button class="template-card" data-template="${esc(text)}" type="button"><b>${esc(name)}</b><small>${esc(text)}</small></button>`).join('')}</div>
     </section>
+    <section class="section-title"><h3>유즈하 후속작</h3><p>나츠미와 별도로 유즈하 환영/DM/회수 설정을 관리해요.</p></section>
+    <div class="toggle-grid">
+      ${toggleCard({ id: 'yuzuhaWelcomeEnabled', label: '유즈하 환영인사 켜기', description: '유즈하 명의로 환영 카드를 보내요.', checked: Boolean(yuzuha.enabled) })}
+      ${toggleCard({ id: 'yuzuhaDmWelcomeEnabled', label: 'DM 환영인사', description: '입장 멤버에게 유즈하 DM 인사를 보내요.', checked: Boolean(yuzuha.dmWelcomeEnabled) })}
+      ${toggleCard({ id: 'yuzuhaCleanupOnLeave', label: '퇴장 시 환영 메시지 회수', description: '유즈하 환영 메시지를 퇴장 시 정리해요.', checked: yuzuha.cleanupOnLeave !== false })}
+    </div>
+    <div class="form-grid">
+      <label>유즈하 환영 채널<select id="yuzuhaWelcomeChannel">${optionList('text', yuzuha.channelId)}</select></label>
+      <label>유즈하 퇴장 카드 채널<select id="yuzuhaLeaveChannel">${optionList('text', yuzuha.leaveChannelId || yuzuha.channelId)}</select></label>
+      <label>유즈하 AI 환영 프롬프트<textarea id="yuzuhaAiPrompt" placeholder="유즈하 톤으로 환영 프롬프트를 적어줘">${esc(yuzuha.aiPrompt || '')}</textarea></label>
+      <label>유즈하 고정 메시지<textarea id="yuzuhaWelcomeMessage" placeholder="변수를 넣어 유즈하 환영 문구를 적어줘">${esc(yuzuha.message || '')}</textarea></label>
+      <label>유즈하 DM 문구<textarea id="yuzuhaDmMessage" placeholder="유즈하 DM 환영 문구">${esc(yuzuha.dmMessage || '')}</textarea></label>
+    </div>
     <div class="form-actions">
       <button class="soft-btn" data-action="test-welcome" type="button">테스트 메시지 보내기</button>
       <button class="primary-btn" data-action="save-welcome" type="button">환영인사 저장</button>
@@ -679,6 +694,17 @@ function collectSettingsFromDom() {
       leaveChannelId: formValue('#leaveChannel'),
       aiPrompt: formValue('#aiPrompt'),
       message: formValue('#welcomeMessage'),
+    };
+    next.yuzuha = {
+      ...next.yuzuha,
+      enabled: document.querySelector('#yuzuhaWelcomeEnabled')?.checked || false,
+      dmWelcomeEnabled: document.querySelector('#yuzuhaDmWelcomeEnabled')?.checked || false,
+      cleanupOnLeave: document.querySelector('#yuzuhaCleanupOnLeave')?.checked !== false,
+      channelId: formValue('#yuzuhaWelcomeChannel'),
+      leaveChannelId: formValue('#yuzuhaLeaveChannel'),
+      aiPrompt: formValue('#yuzuhaAiPrompt'),
+      message: formValue('#yuzuhaWelcomeMessage'),
+      dmMessage: formValue('#yuzuhaDmMessage'),
     };
   }
   if (state.activeTab === 'tts') {

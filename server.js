@@ -46,6 +46,7 @@ const DashboardSettings = model('DashboardSettings', new Schema({
     moderation: { type: Boolean, default: false },
   },
   welcome: { type: Schema.Types.Mixed, default: {} },
+  yuzuha: { type: Schema.Types.Mixed, default: {} },
   notice: { type: Schema.Types.Mixed, default: {} },
   tts: { type: Schema.Types.Mixed, default: {} },
   emojiUpscale: { type: Schema.Types.Mixed, default: {} },
