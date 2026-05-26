@@ -162,8 +162,11 @@ const state = {
   isOwner: false,
   announcements: [],
   botStatus: null,
-  bots: [{ key: 'natsumi', name: 'Natsumi', botId: '905355491708903485', enabled: true }],
-  selectedBot: localStorage.getItem(selectedBotKey) || 'natsumi',
+  bots: [
+    { key: 'yuzuha', name: 'Yuzuha', botId: '1508101246723035196', enabled: true },
+    { key: 'natsumi', name: 'Natsumi', botId: '905355491708903485', enabled: true },
+  ],
+  selectedBot: localStorage.getItem(selectedBotKey) || 'yuzuha',
   heart: { verified: false, heartUrl: 'https://koreanbots.dev/bots/905355491708903485' },
 };
 
@@ -182,7 +185,7 @@ async function api(path, options = {}) {
 }
 
 function currentBotKey() {
-  return state.selectedBot === 'yuzuha' ? 'yuzuha' : 'natsumi';
+  return state.selectedBot === 'natsumi' ? 'natsumi' : 'yuzuha';
 }
 
 function withBot(path) {
@@ -191,7 +194,7 @@ function withBot(path) {
 }
 
 function currentBotProfile() {
-  return state.bots.find((bot) => bot.key === currentBotKey()) || state.bots[0] || { key: 'natsumi', name: 'Natsumi', botId: '905355491708903485' };
+  return state.bots.find((bot) => bot.key === currentBotKey()) || state.bots[0] || { key: 'yuzuha', name: 'Yuzuha', botId: '1508101246723035196' };
 }
 
 function applyTheme(next = state.theme) {
@@ -622,15 +625,21 @@ async function loadBots() {
     const data = await api('/api/dashboard/bots');
     const bots = Array.isArray(data.bots) && data.bots.length
       ? data.bots
-      : [{ key: 'natsumi', name: 'Natsumi', botId: '905355491708903485', enabled: true }];
+      : [
+          { key: 'yuzuha', name: 'Yuzuha', botId: '1508101246723035196', enabled: true },
+          { key: 'natsumi', name: 'Natsumi', botId: '905355491708903485', enabled: true },
+        ];
     state.bots = bots;
     if (!bots.some((bot) => bot.key === state.selectedBot && bot.enabled !== false)) {
-      state.selectedBot = bots.find((bot) => bot.enabled !== false)?.key || 'natsumi';
+      state.selectedBot = bots.find((bot) => bot.enabled !== false)?.key || 'yuzuha';
     }
     localStorage.setItem(selectedBotKey, state.selectedBot);
   } catch {
-    state.bots = [{ key: 'natsumi', name: 'Natsumi', botId: '905355491708903485', enabled: true }];
-    state.selectedBot = 'natsumi';
+    state.bots = [
+      { key: 'yuzuha', name: 'Yuzuha', botId: '1508101246723035196', enabled: true },
+      { key: 'natsumi', name: 'Natsumi', botId: '905355491708903485', enabled: true },
+    ];
+    state.selectedBot = 'yuzuha';
   }
 }
 
@@ -934,7 +943,7 @@ app.addEventListener('change', async (event) => {
     dashboard();
   }
   if (event.target.id === 'botSelect' && state.isOwner) {
-    state.selectedBot = event.target.value === 'yuzuha' ? 'yuzuha' : 'natsumi';
+    state.selectedBot = event.target.value === 'natsumi' ? 'natsumi' : 'yuzuha';
     localStorage.setItem(selectedBotKey, state.selectedBot);
     await Promise.all([loadGuilds(), loadBotStatus()]);
     await loadSettings();
