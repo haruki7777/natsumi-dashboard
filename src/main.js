@@ -83,7 +83,7 @@ const sampleTemplates = [
   ['랭크 카드', '환영해, {user.name}! 프로필 카드를 곧 준비해줄게.'],
   ['관리 안내', '{user.mention} 님이 입장했어요. 규칙을 확인하고 즐겁게 지내주세요.'],
   ['친근한 말투', '{random.welcome} {user.name}! 기다리고 있었어.'],
-  ['AI 프롬프트', '새 멤버 {user.name}에게 귀엽고 따뜻한 나츠미식 환영 인사를 만들어줘.'],
+  ['AI 프롬프트', '새 멤버 {user.name}에게 귀엽고 밝은 유즈하식 환영 인사를 만들어줘.'],
   ['게임센터', 'PRESS START, {user.name}! {server.name} 모험이 시작됐어.'],
   ['차분한 안내', '{user.mention} 님, 환영합니다. 필요한 안내는 공지 채널에서 확인해주세요.'],
   ['친구 초대', '{user.name} 등장! 지금 멤버는 {server.count}명이야.'],
@@ -94,14 +94,14 @@ const sampleTemplates = [
 
 const fallbackGuilds = [{
   id: 'preview',
-  name: '나츠미 미리보기 서버',
+  name: '유즈하 미리보기 서버',
   icon: '',
   manageable: true,
   botPresent: true,
   channels: [
     { id: 'notice', name: '공지', type: 'text' },
     { id: 'welcome', name: '환영인사', type: 'text' },
-    { id: 'tts-chat', name: '나츠미-tts', type: 'text' },
+    { id: 'tts-chat', name: '유즈하-tts', type: 'text' },
     { id: 'voice-main', name: '음성여우굴', type: 'voice' },
     { id: 'cat-voice', name: '음성여우굴', type: 'category' },
   ],
@@ -113,7 +113,7 @@ const defaultSettings = {
   welcome: { enabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '어서 와, {user.mention}! {server.name}에 온 걸 환영해!', aiPrompt: '' },
   yuzuha: { enabled: false, dmWelcomeEnabled: false, channelId: '', leaveChannelId: '', cleanupOnLeave: true, message: '유즈하가 인사할게요, {user.mention}! {server.name}에 온 걸 환영해요.', dmMessage: '안녕하세요, {user.name}! {server.name}에 와줘서 고마워요.', aiPrompt: '' },
   tts: { enabled: false, categoryId: '', textChannelId: '', voiceChannelId: '', voice: 'edge_ko_sunhi' },
-  emojiUpscale: { enabled: false, channelId: '', webhookName: 'Natsumi Emoji Upscaler' },
+  emojiUpscale: { enabled: false, channelId: '', webhookName: 'Yuzuha Emoji Upscaler' },
   moderation: {
     enabled: false,
     badWordDetect: false,
@@ -252,7 +252,7 @@ function shell(content) {
       ${renderPetals()}
       <header class="topbar glass">
         <button class="brand" data-action="notice" type="button">
-          <span><img src="${NATSUMI_PROFILE_IMAGE}" alt="" /></span><b>${esc((currentBotProfile().name || 'NATSUMI').toUpperCase())}</b>
+          <span><img src="${NATSUMI_PROFILE_IMAGE}" alt="" /></span><b>${esc((currentBotProfile().name || 'YUZUHA').toUpperCase())}</b>
         </button>
         <div class="top-actions">
           <label class="mode-toggle" title="Theme">
@@ -267,8 +267,8 @@ function shell(content) {
       </header>
       ${content}
       <footer class="footer glass">
-        <b>나츠미 관리자 모드</b>
-        <small>공지사항은 공개로 보이고, 설정은 지정된 개발자와 관리자만 사용할 수 있어요.</small>
+        <b>${esc(currentBotProfile().name || '유즈하')} 관리자 모드</b>
+        <small>공지사항은 공개로 보이고, 설정은 지정된 개발자와 서버 관리자만 사용할 수 있어요.</small>
       </footer>
     </div>
   `;
@@ -289,9 +289,9 @@ function renderPetals() {
 function publicNoticePage() {
   app.innerHTML = shell(`
     <main class="hero-panel glass">
-      <p class="eyebrow">Natsumi Notice</p>
-      <h1>나츠미 지원 서버</h1>
-      <p class="hero-desc">나츠미의 최신 소식과 점검 안내를 먼저 확인할 수 있어요.</p>
+      <p class="eyebrow">${esc(currentBotProfile().name || 'Yuzuha')} Notice</p>
+      <h1>${esc(currentBotProfile().name || '유즈하')} 지원 서버</h1>
+      <p class="hero-desc">${esc(currentBotProfile().name || '유즈하')}의 최신 소식과 점검 안내를 먼저 확인할 수 있어요.</p>
       <div class="hero-actions">
         <button class="soft-btn" data-action="refresh-public" type="button">새로고침</button>
         ${state.isOwner ? '<button class="primary-btn" data-action="toggle-menu" type="button">관리 메뉴</button>' : ''}
@@ -395,14 +395,14 @@ function renderDeveloperAnnouncements() {
       <div class="section-title notice-title">
         <div>
           <h3>공지사항</h3>
-          <p>나츠미의 최신 소식과 점검 안내가 여기에 올라와요.</p>
+          <p>${esc(currentBotProfile().name || '유즈하')}의 최신 소식과 점검 안내가 여기에 올라와요.</p>
         </div>
         <span class="notice-count">${rows.length ? `${rows.length}개` : '대기 중'}</span>
       </div>
       <div class="notice-feed">
         ${rows.map((row) => `
           <article class="support-notice-card">
-            <h4>${esc(row.title || '나츠미 지원서버 공지')}</h4>
+            <h4>${esc(row.title || `${currentBotProfile().name || '유즈하'} 지원서버 공지`)}</h4>
             ${row.subtitle ? `<b>${esc(row.subtitle)}</b>` : ''}
             <p>${esc(row.message || '')}</p>
             ${row.imageUrl ? `<img class="notice-image" src="${esc(row.imageUrl)}" alt="" />` : ''}
@@ -463,7 +463,7 @@ function renderWelcome() {
       <div class="split-head"><h4>샘플 템플릿 11개</h4><button class="ghost-btn" data-action="clear-template" type="button">모두 지우기</button></div>
       <div class="template-grid">${sampleTemplates.map(([name, text]) => `<button class="template-card" data-template="${esc(text)}" type="button"><b>${esc(name)}</b><small>${esc(text)}</small></button>`).join('')}</div>
     </section>
-    <section class="section-title"><h3>유즈하 후속작</h3><p>나츠미와 별도로 유즈하 환영/DM/회수 설정을 관리해요.</p></section>
+    <section class="section-title"><h3>유즈하 전용 환영</h3><p>유즈하의 환영/DM/회수 설정을 따로 관리해요.</p></section>
     <div class="toggle-grid">
       ${toggleCard({ id: 'yuzuhaWelcomeEnabled', label: '유즈하 환영인사 켜기', description: '유즈하 명의로 환영 카드를 보내요.', checked: Boolean(yuzuha.enabled) })}
       ${toggleCard({ id: 'yuzuhaDmWelcomeEnabled', label: 'DM 환영인사', description: '입장 멤버에게 유즈하 DM 인사를 보내요.', checked: Boolean(yuzuha.dmWelcomeEnabled) })}
@@ -503,7 +503,7 @@ function renderCommands() {
 function renderTts() {
   const tts = { ...(state.settings.tts || defaultSettings.tts), voice: normalizeVoice(state.settings.tts?.voice) };
   return `
-    <section class="section-title"><h3>TTS 관리</h3><p>전용 채팅방에 글을 쓰면 나츠미가 음성채널에 들어가 읽어줘요.</p></section>
+    <section class="section-title"><h3>TTS 관리</h3><p>전용 채팅방에 글을 쓰면 ${esc(currentBotProfile().name || '유즈하')}가 음성채널에 들어가 읽어줘요.</p></section>
     <div class="toggle-grid">${toggleCard({ id: 'ttsEnabled', label: 'TTS 켜기', description: '전용 채팅방 메시지를 음성으로 읽어요.', checked: Boolean(tts.enabled) })}</div>
     <div class="form-grid">
       <label>TTS 카테고리<select id="ttsCategory">${optionList('category', tts.categoryId)}</select></label>
@@ -522,7 +522,7 @@ function renderEmoji() {
     <div class="toggle-grid">${toggleCard({ id: 'emojiEnabled', label: '이모지 업스케일 켜기', description: '커스텀 이모지 확대만 처리하고 일반 사진은 건드리지 않아요.', checked: Boolean(emoji.enabled) })}</div>
     <div class="form-grid">
       <label>반응 채널<select id="emojiChannel">${optionList('text', emoji.channelId, '모든 채널에서 자동 반응')}</select></label>
-      <label>웹훅 표시 이름<input id="emojiWebhookName" value="${esc(emoji.webhookName || 'Natsumi Emoji Upscaler')}" /></label>
+      <label>웹훅 표시 이름<input id="emojiWebhookName" value="${esc(emoji.webhookName || 'Yuzuha Emoji Upscaler')}" /></label>
     </div>
     <div class="form-actions"><button class="primary-btn" data-action="save-emoji" type="button">이모지 설정 저장</button></div>
   `;
@@ -769,7 +769,7 @@ function collectSettingsFromDom() {
       ...next.emojiUpscale,
       enabled: document.querySelector('#emojiEnabled')?.checked || false,
       channelId: formValue('#emojiChannel'),
-      webhookName: formValue('#emojiWebhookName') || 'Natsumi Emoji Upscaler',
+      webhookName: formValue('#emojiWebhookName') || 'Yuzuha Emoji Upscaler',
     };
   }
   if (state.activeTab === 'moderation') {
