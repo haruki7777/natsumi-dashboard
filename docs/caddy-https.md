@@ -27,3 +27,5 @@ SITE_URL=https://natsumi-site.kro.kr/
 PUBLIC_BASE_URL=https://natsumidashboard.kro.kr
 ALLOWED_ORIGINS=https://natsumidashboard.kro.kr,https://natsumi-game.kro.kr,https://natsumi-site.kro.kr
 ```
+
+Do not enable app-level `FORCE_HTTPS=true` until Caddy is actually serving a valid certificate on ports 80 and 443. Caddy should be the layer that redirects HTTP to HTTPS.
