@@ -340,7 +340,7 @@ function renderMenuDrawer() {
       </select>
       <label class="select-label">길드 선택</label>
       <select class="wide-select" id="guildSelect">
-        ${manageableGuilds().map((g) => `<option value="${esc(g.id)}" ${g.id === guild.id ? 'selected' : ''} ${g.botPresent === false ? 'data-missing-bot="1"' : ''}>${esc(g.name)}${g.botPresent === false ? ` · ${esc(currentBotProfile().name)} 초대 필요` : ''}</option>`).join('')}
+        ${manageableGuilds().map((g) => `<option value="${esc(g.id)}" ${g.id === guild.id ? 'selected' : ''} ${g.botPresent === false ? 'data-missing-bot="1"' : ''}>${esc(g.name)}${g.botPresent === false ? ` · ${esc(currentBotProfile().name)} 초대 필요` : ''}${g.botPresent === null ? ` · ${esc(currentBotProfile().name)} 연동 확인 중` : ''}</option>`).join('')}
       </select>
       <div class="menu-list">
         <button class="menu-tile ${state.activeTab === 'notice' ? 'active' : ''}" data-tab="notice" type="button">공지사항</button>
@@ -353,6 +353,7 @@ function renderMenuDrawer() {
 function renderPanel() {
   const guild = currentGuild();
   if (state.activeTab === 'notice') return renderDeveloperAnnouncements();
+  if (guild.botPresent === null) return renderBotTokenRequired();
   if (guild.botPresent === false) return renderInviteRequired(guild);
   if (premiumTabs.has(state.activeTab) && !state.heart.verified) return renderHeartLock();
   if (state.activeTab === 'settings') return renderSettings();
@@ -373,6 +374,19 @@ function renderInviteRequired(guild) {
       <p>${esc(guild.name)} 서버는 관리자 권한은 확인됐지만, ${esc(botName)}가 아직 들어가 있지 않거나 채널 정보를 읽을 수 없어요. ${esc(botName)}를 초대한 뒤 다시 새로고침해줘.</p>
       <div class="form-actions">
         <a class="primary-btn" href="${botInviteUrl()}" target="_blank" rel="noreferrer">${esc(botName)} 초대하기</a>
+        <button class="soft-btn" data-action="refresh" type="button">다시 확인</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderBotTokenRequired() {
+  const botName = currentBotProfile().name;
+  return `
+    <section class="tool-card invite-required">
+      <h3>${esc(botName)} 연동을 확인하는 중이에요</h3>
+      <p>대시보드 서버에 ${esc(botName)} 봇 토큰이 없으면 Discord API로 서버 초대 여부를 확인할 수 없어요. 토큰이 연결되면 실제 초대된 서버만 정상 설정 화면으로 열려요.</p>
+      <div class="form-actions">
         <button class="soft-btn" data-action="refresh" type="button">다시 확인</button>
       </div>
     </section>
@@ -677,7 +691,7 @@ async function loadGuilds() {
 }
 
 async function loadSettings() {
-  if (!state.isOwner || currentGuild().botPresent === false) {
+  if (!state.isOwner || currentGuild().botPresent === false || currentGuild().botPresent === null) {
     state.settings = structuredClone(defaultSettings);
     return;
   }

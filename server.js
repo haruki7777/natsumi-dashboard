@@ -10,9 +10,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 const PORT = Number(process.env.SERVER_PORT || process.env.PORT || 3000);
-const DASHBOARD_URL = (process.env.DASHBOARD_URL || 'http://natsumidashboard.kro.kr:25901/').replace(/\/$/, '') + '/';
+const DASHBOARD_URL = (process.env.DASHBOARD_URL || 'https://natsumidashboard.kro.kr/').replace(/\/$/, '') + '/';
 const SITE_URL = (process.env.SITE_URL || 'https://natsumi-site.kro.kr/').replace(/\/$/, '') + '/';
-const GAME_URL = (process.env.GAME_URL || 'http://natsumi-game.kro.kr:25772/').replace(/\/$/, '') + '/';
+const GAME_URL = (process.env.GAME_URL || 'https://natsumi-game.kro.kr/').replace(/\/$/, '') + '/';
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 const NATSUMI_BOT_TOKEN = process.env.NATSUMI_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN || process.env.TOKEN || '';
@@ -288,7 +288,7 @@ function canUseChannel(permissions, type) {
 async function fetchBotGuildChannels(guild, userId, botKey = 'natsumi') {
   const guildId = guild.id;
   const token = BOT_PROFILES[normalizeBotKey(botKey)]?.token;
-  if (!token) return [];
+  if (!token) return null;
   const [channels, roles, member] = await Promise.all([
     fetchDiscordBot(`/guilds/${guildId}/channels`, botKey),
     fetchDiscordBot(`/guilds/${guildId}/roles`, botKey),
@@ -505,6 +505,8 @@ app.post('/api/developer-announcements', requireLogin, requireOwner, async (req,
 
 app.get('/api/dashboard/guilds', requireLogin, requireOwner, async (req, res) => {
   const botKey = requestedBotKey(req);
+  const botProfile = BOT_PROFILES[botKey];
+  const botConfigured = Boolean(botProfile?.token);
   const manageable = (await fetchUserGuilds(req)).filter(isGuildAdmin);
   const guilds = await Promise.all(manageable.map(async (guild) => {
     const channels = await fetchBotGuildChannels(guild, req.session.discordUser.id, botKey);
@@ -513,11 +515,12 @@ app.get('/api/dashboard/guilds', requireLogin, requireOwner, async (req, res) =>
       name: guild.name,
       icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128` : '',
       manageable: true,
-      botPresent: channels.length > 0,
-      channels,
+      botPresent: channels === null ? null : channels.length > 0,
+      botConfigured,
+      channels: channels || [],
     };
   }));
-  res.json({ guilds, bot: { key: botKey, botId: BOT_PROFILES[botKey]?.botId || null, name: BOT_PROFILES[botKey]?.name || 'Bot' } });
+  res.json({ guilds, bot: { key: botKey, botId: botProfile?.botId || null, name: botProfile?.name || 'Bot', configured: botConfigured } });
 });
 
 app.get('/api/dashboard/guilds/:guildId/settings', requireLogin, requireOwner, requireGuildAdmin, async (req, res) => {
