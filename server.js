@@ -465,7 +465,8 @@ app.get('/api/dashboard/bots', (_req, res) => {
       key: bot.key,
       name: bot.name,
       botId: bot.botId,
-      enabled: Boolean(bot.token),
+      enabled: Boolean(bot.botId),
+      configured: Boolean(bot.token),
     })),
   });
 });

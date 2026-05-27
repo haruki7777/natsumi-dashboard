@@ -107,6 +107,11 @@ const fallbackGuilds = [{
   ],
 }];
 
+const defaultBots = [
+  { key: 'natsumi', name: '나츠미', botId: '905355491708903485', enabled: true },
+  { key: 'yuzuha', name: '유즈하', botId: '1508101246723035196', enabled: true },
+];
+
 const defaultSettings = {
   disabledCommands: [],
   features: { welcome: false, ticket: true, tts: false, ai: true, shop: true, emojiUpscale: false, level: false, moderation: false },
@@ -162,11 +167,8 @@ const state = {
   isOwner: false,
   announcements: [],
   botStatus: null,
-  bots: [
-    { key: 'yuzuha', name: 'Yuzuha', botId: '1508101246723035196', enabled: true },
-    { key: 'natsumi', name: 'Natsumi', botId: '905355491708903485', enabled: true },
-  ],
-  selectedBot: localStorage.getItem(selectedBotKey) || 'yuzuha',
+  bots: structuredClone(defaultBots),
+  selectedBot: localStorage.getItem(selectedBotKey) || 'natsumi',
   heart: { verified: false, heartUrl: 'https://koreanbots.dev/bots/905355491708903485' },
 };
 
@@ -194,7 +196,9 @@ function withBot(path) {
 }
 
 function currentBotProfile() {
-  return state.bots.find((bot) => bot.key === currentBotKey()) || state.bots[0] || { key: 'yuzuha', name: 'Yuzuha', botId: '1508101246723035196' };
+  return state.bots.find((bot) => bot.key === currentBotKey())
+    || defaultBots.find((bot) => bot.key === currentBotKey())
+    || defaultBots[0];
 }
 
 function applyTheme(next = state.theme) {
@@ -332,7 +336,7 @@ function renderMenuDrawer() {
       </div>
       <label class="select-label">서버 선택</label>
       <select class="wide-select" id="botSelect">
-        ${state.bots.filter((b) => b.enabled !== false).map((b) => `<option value="${esc(b.key)}" ${b.key === currentBotKey() ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}
+        ${state.bots.filter((b) => b.enabled !== false).map((b) => `<option value="${esc(b.key)}" ${b.key === currentBotKey() ? 'selected' : ''}>${esc(b.name)} 설정</option>`).join('')}
       </select>
       <label class="select-label">길드 선택</label>
       <select class="wide-select" id="guildSelect">
@@ -446,8 +450,36 @@ function renderSettings() {
 function renderWelcome() {
   const welcome = state.settings.welcome || defaultSettings.welcome;
   const yuzuha = state.settings.yuzuha || defaultSettings.yuzuha;
+  const isYuzuha = currentBotKey() === 'yuzuha';
+  const titleName = currentBotProfile().name || (isYuzuha ? '유즈하' : '나츠미');
+  if (isYuzuha) {
+    return `
+      <section class="section-title"><h3>${esc(titleName)} 환영인사</h3><p>유즈하의 환영/DM/회수 설정만 따로 관리해요.</p></section>
+      <div class="toggle-grid">
+        ${toggleCard({ id: 'yuzuhaWelcomeEnabled', label: '유즈하 환영인사 켜기', description: '유즈하 명의로 환영 카드를 보내요.', checked: Boolean(yuzuha.enabled) })}
+        ${toggleCard({ id: 'yuzuhaDmWelcomeEnabled', label: 'DM 환영인사', description: '입장 멤버에게 유즈하 DM 인사를 보내요.', checked: Boolean(yuzuha.dmWelcomeEnabled) })}
+        ${toggleCard({ id: 'yuzuhaCleanupOnLeave', label: '퇴장 시 환영 메시지 회수', description: '유즈하 환영 메시지를 퇴장 시 정리해요.', checked: yuzuha.cleanupOnLeave !== false })}
+      </div>
+      <div class="form-grid">
+        <label>유즈하 환영 채널<select id="yuzuhaWelcomeChannel">${optionList('text', yuzuha.channelId)}</select></label>
+        <label>유즈하 퇴장 카드 채널<select id="yuzuhaLeaveChannel">${optionList('text', yuzuha.leaveChannelId || yuzuha.channelId)}</select></label>
+        <label>유즈하 AI 환영 프롬프트<textarea id="yuzuhaAiPrompt" placeholder="유즈하 톤으로 환영 프롬프트를 적어줘">${esc(yuzuha.aiPrompt || '')}</textarea></label>
+        <label>유즈하 고정 메시지<textarea id="yuzuhaWelcomeMessage" placeholder="변수를 넣어 유즈하 환영 문구를 적어줘">${esc(yuzuha.message || '')}</textarea></label>
+        <label>유즈하 DM 문구<textarea id="yuzuhaDmMessage" placeholder="유즈하 DM 환영 문구">${esc(yuzuha.dmMessage || '')}</textarea></label>
+      </div>
+      <section class="tool-card"><h4>변수 삽입</h4><div class="chip-grid">${welcomeVariables.map((v) => `<button class="chip" data-insert="${esc(v)}" type="button">${esc(v)}</button>`).join('')}</div></section>
+      <section class="tool-card">
+        <div class="split-head"><h4>샘플 템플릿 11개</h4><button class="ghost-btn" data-action="clear-template" type="button">모두 지우기</button></div>
+        <div class="template-grid">${sampleTemplates.map(([name, text]) => `<button class="template-card" data-template="${esc(text)}" type="button"><b>${esc(name)}</b><small>${esc(text)}</small></button>`).join('')}</div>
+      </section>
+      <div class="form-actions">
+        <button class="soft-btn" data-action="test-welcome" type="button">테스트 메시지 보내기</button>
+        <button class="primary-btn" data-action="save-welcome" type="button">유즈하 환영인사 저장</button>
+      </div>
+    `;
+  }
   return `
-    <section class="section-title"><h3>환영인사</h3><p>입장 카드와 환영 멘트를 관리해요.</p></section>
+    <section class="section-title"><h3>${esc(titleName)} 환영인사</h3><p>나츠미의 입장 카드와 환영 멘트만 따로 관리해요.</p></section>
     <div class="toggle-grid">
       ${toggleCard({ id: 'welcomeEnabled', label: '환영인사 켜기', description: '멤버가 들어오면 환영 카드를 보내요.', checked: Boolean(welcome.enabled) })}
       ${toggleCard({ id: 'cleanupOnLeave', label: '퇴장 시 환영 메시지 회수', description: '멤버가 나가면 기존 환영 메시지를 정리해요.', checked: welcome.cleanupOnLeave !== false })}
@@ -463,22 +495,9 @@ function renderWelcome() {
       <div class="split-head"><h4>샘플 템플릿 11개</h4><button class="ghost-btn" data-action="clear-template" type="button">모두 지우기</button></div>
       <div class="template-grid">${sampleTemplates.map(([name, text]) => `<button class="template-card" data-template="${esc(text)}" type="button"><b>${esc(name)}</b><small>${esc(text)}</small></button>`).join('')}</div>
     </section>
-    <section class="section-title"><h3>유즈하 전용 환영</h3><p>유즈하의 환영/DM/회수 설정을 따로 관리해요.</p></section>
-    <div class="toggle-grid">
-      ${toggleCard({ id: 'yuzuhaWelcomeEnabled', label: '유즈하 환영인사 켜기', description: '유즈하 명의로 환영 카드를 보내요.', checked: Boolean(yuzuha.enabled) })}
-      ${toggleCard({ id: 'yuzuhaDmWelcomeEnabled', label: 'DM 환영인사', description: '입장 멤버에게 유즈하 DM 인사를 보내요.', checked: Boolean(yuzuha.dmWelcomeEnabled) })}
-      ${toggleCard({ id: 'yuzuhaCleanupOnLeave', label: '퇴장 시 환영 메시지 회수', description: '유즈하 환영 메시지를 퇴장 시 정리해요.', checked: yuzuha.cleanupOnLeave !== false })}
-    </div>
-    <div class="form-grid">
-      <label>유즈하 환영 채널<select id="yuzuhaWelcomeChannel">${optionList('text', yuzuha.channelId)}</select></label>
-      <label>유즈하 퇴장 카드 채널<select id="yuzuhaLeaveChannel">${optionList('text', yuzuha.leaveChannelId || yuzuha.channelId)}</select></label>
-      <label>유즈하 AI 환영 프롬프트<textarea id="yuzuhaAiPrompt" placeholder="유즈하 톤으로 환영 프롬프트를 적어줘">${esc(yuzuha.aiPrompt || '')}</textarea></label>
-      <label>유즈하 고정 메시지<textarea id="yuzuhaWelcomeMessage" placeholder="변수를 넣어 유즈하 환영 문구를 적어줘">${esc(yuzuha.message || '')}</textarea></label>
-      <label>유즈하 DM 문구<textarea id="yuzuhaDmMessage" placeholder="유즈하 DM 환영 문구">${esc(yuzuha.dmMessage || '')}</textarea></label>
-    </div>
     <div class="form-actions">
       <button class="soft-btn" data-action="test-welcome" type="button">테스트 메시지 보내기</button>
-      <button class="primary-btn" data-action="save-welcome" type="button">환영인사 저장</button>
+      <button class="primary-btn" data-action="save-welcome" type="button">나츠미 환영인사 저장</button>
     </div>
   `;
 }
@@ -623,23 +642,20 @@ async function loadSession() {
 async function loadBots() {
   try {
     const data = await api('/api/dashboard/bots');
-    const bots = Array.isArray(data.bots) && data.bots.length
-      ? data.bots
-      : [
-          { key: 'yuzuha', name: 'Yuzuha', botId: '1508101246723035196', enabled: true },
-          { key: 'natsumi', name: 'Natsumi', botId: '905355491708903485', enabled: true },
-        ];
-    state.bots = bots;
-    if (!bots.some((bot) => bot.key === state.selectedBot && bot.enabled !== false)) {
-      state.selectedBot = bots.find((bot) => bot.enabled !== false)?.key || 'yuzuha';
+    const remoteBots = Array.isArray(data.bots) ? data.bots : [];
+    state.bots = defaultBots.map((fallback) => ({
+      ...(remoteBots.find((bot) => bot.key === fallback.key) || {}),
+      ...fallback,
+      botId: remoteBots.find((bot) => bot.key === fallback.key)?.botId || fallback.botId,
+      enabled: true,
+    }));
+    if (!state.bots.some((bot) => bot.key === state.selectedBot && bot.enabled !== false)) {
+      state.selectedBot = 'natsumi';
     }
     localStorage.setItem(selectedBotKey, state.selectedBot);
   } catch {
-    state.bots = [
-      { key: 'yuzuha', name: 'Yuzuha', botId: '1508101246723035196', enabled: true },
-      { key: 'natsumi', name: 'Natsumi', botId: '905355491708903485', enabled: true },
-    ];
-    state.selectedBot = 'yuzuha';
+    state.bots = structuredClone(defaultBots);
+    if (!state.bots.some((bot) => bot.key === state.selectedBot)) state.selectedBot = 'natsumi';
   }
 }
 
@@ -733,26 +749,29 @@ function collectSettingsFromDom() {
     next.disabledCommands = [...document.querySelectorAll('[data-command]')].filter((input) => !input.checked).map((input) => input.dataset.command);
   }
   if (state.activeTab === 'welcome') {
-    next.welcome = {
-      ...next.welcome,
-      enabled: document.querySelector('#welcomeEnabled')?.checked || false,
-      cleanupOnLeave: document.querySelector('#cleanupOnLeave')?.checked !== false,
-      channelId: formValue('#welcomeChannel'),
-      leaveChannelId: formValue('#leaveChannel'),
-      aiPrompt: formValue('#aiPrompt'),
-      message: formValue('#welcomeMessage'),
-    };
-    next.yuzuha = {
-      ...next.yuzuha,
-      enabled: document.querySelector('#yuzuhaWelcomeEnabled')?.checked || false,
-      dmWelcomeEnabled: document.querySelector('#yuzuhaDmWelcomeEnabled')?.checked || false,
-      cleanupOnLeave: document.querySelector('#yuzuhaCleanupOnLeave')?.checked !== false,
-      channelId: formValue('#yuzuhaWelcomeChannel'),
-      leaveChannelId: formValue('#yuzuhaLeaveChannel'),
-      aiPrompt: formValue('#yuzuhaAiPrompt'),
-      message: formValue('#yuzuhaWelcomeMessage'),
-      dmMessage: formValue('#yuzuhaDmMessage'),
-    };
+    if (currentBotKey() === 'yuzuha') {
+      next.yuzuha = {
+        ...next.yuzuha,
+        enabled: document.querySelector('#yuzuhaWelcomeEnabled')?.checked || false,
+        dmWelcomeEnabled: document.querySelector('#yuzuhaDmWelcomeEnabled')?.checked || false,
+        cleanupOnLeave: document.querySelector('#yuzuhaCleanupOnLeave')?.checked !== false,
+        channelId: formValue('#yuzuhaWelcomeChannel'),
+        leaveChannelId: formValue('#yuzuhaLeaveChannel'),
+        aiPrompt: formValue('#yuzuhaAiPrompt'),
+        message: formValue('#yuzuhaWelcomeMessage'),
+        dmMessage: formValue('#yuzuhaDmMessage'),
+      };
+    } else {
+      next.welcome = {
+        ...next.welcome,
+        enabled: document.querySelector('#welcomeEnabled')?.checked || false,
+        cleanupOnLeave: document.querySelector('#cleanupOnLeave')?.checked !== false,
+        channelId: formValue('#welcomeChannel'),
+        leaveChannelId: formValue('#leaveChannel'),
+        aiPrompt: formValue('#aiPrompt'),
+        message: formValue('#welcomeMessage'),
+      };
+    }
   }
   if (state.activeTab === 'tts') {
     next.tts = {
@@ -828,7 +847,7 @@ async function saveSettings() {
 async function sendWelcomeTest() {
   await saveSettings();
   try {
-    await api(`/api/dashboard/guilds/${currentGuild().id}/welcome/test`, { method: 'POST', body: JSON.stringify({ settings: state.settings }) });
+    await api(withBot(`/api/dashboard/guilds/${currentGuild().id}/welcome/test`), { method: 'POST', body: JSON.stringify({ bot: currentBotKey(), settings: state.settings }) });
     toast('테스트 환영 메시지를 보냈어.');
   } catch {
     toast('테스트 API를 확인해야 해. 설정 저장은 완료됐어.');
