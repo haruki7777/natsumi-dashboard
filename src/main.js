@@ -357,7 +357,7 @@ function renderPanel() {
   if (state.activeTab === 'notice') return renderDeveloperAnnouncements();
   if (guild.botPresent === null) return renderBotTokenRequired();
   if (guild.botPresent === false) return renderInviteRequired(guild);
-  if (premiumTabs.has(state.activeTab) && !state.heart.verified) return renderHeartLock();
+  if (false && premiumTabs.has(state.activeTab) && !state.heart.verified) return renderHeartLock();
   if (state.activeTab === 'settings') return renderSettings();
   if (state.activeTab === 'welcome') return renderWelcome();
   if (state.activeTab === 'commands') return renderCommands();
