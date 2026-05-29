@@ -123,6 +123,13 @@ const DashboardQuestion = model('DashboardQuestion', new Schema({
   answeredAt: Date,
 }));
 
+const NatsumiAnonIdentity = model('NatsumiAnonIdentity', new Schema({
+  guildId: { type: String, required: true, index: true },
+  userId: { type: String, required: true, index: true },
+  anonIp: { type: String, required: true, index: true },
+  updatedAt: Date,
+}, { timestamps: true }));
+
 const DeveloperAnnouncement = model('DeveloperAnnouncement', new Schema({
   authorId: String,
   authorName: String,
@@ -598,6 +605,23 @@ app.post('/api/dashboard/guilds/:guildId/notice', requireLogin, requireGuildAdmi
   const sent = await sendGuildNoticeMessage(channelId, message, botKey);
   if (sent.ok) await DashboardNotice.updateOne({ _id: row._id }, { $set: { sentMessageId: sent.messageId } });
   res.json({ ok: sent.ok, notice: row, messageId: sent.messageId, error: sent.error });
+});
+
+app.get('/api/dashboard/guilds/:guildId/anonymous/lookup', requireLogin, requireGuildAdmin, async (req, res) => {
+  const anonIp = String(req.query?.ip || '').trim();
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(anonIp)) return res.status(400).json({ error: '유동 IP 형식으로 입력해줘. 예: 123.45.67.89' });
+  const row = await NatsumiAnonIdentity.findOne({ guildId: req.params.guildId, anonIp }).lean();
+  if (!row) return res.status(404).json({ error: '해당 유동 IP 기록을 찾지 못했어.' });
+  const member = await fetchDiscordBot(`/guilds/${req.params.guildId}/members/${row.userId}`, requestedBotKey(req)).catch(() => null);
+  res.json({
+    anonIp,
+    userId: row.userId,
+    username: member?.user?.global_name || member?.user?.username || null,
+    avatar: member?.user?.avatar
+      ? `https://cdn.discordapp.com/avatars/${row.userId}/${member.user.avatar}.png?size=128`
+      : '',
+    updatedAt: row.updatedAt || row.updatedAt,
+  });
 });
 
 app.get('/api/dashboard/guilds/:guildId/questions', requireLogin, requireGuildAdmin, async (req, res) => {

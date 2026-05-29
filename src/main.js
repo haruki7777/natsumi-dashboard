@@ -595,6 +595,13 @@ function renderModeration() {
       <label>예외 역할 ID<textarea id="whitelistRoles" placeholder="role id">${esc((whitelist.roles || []).join('\n'))}</textarea></label>
       <label>예외 채널 ID<textarea id="whitelistChannels" placeholder="channel id">${esc((whitelist.channels || []).join('\n'))}</textarea></label>
     </div>
+    <section class="tool-card">
+      <h4>익명 가면방 유동 IP 조회</h4>
+      <p>문제가 된 유동 IP를 넣으면 실제 유저 ID와 프로필 이름을 확인할 수 있어요. 관리자만 조회돼요.</p>
+      <div class="form-grid"><label>유동 IP<input id="anonLookupIp" placeholder="123.45.67.89" /></label></div>
+      <div class="form-actions"><button class="soft-btn" data-action="lookup-anon" type="button">유동 IP 조회</button></div>
+      <div id="anonLookupResult" class="command-list"></div>
+    </section>
     <div class="form-actions"><button class="primary-btn" data-action="save-moderation" type="button">자동관리 저장</button></div>
   `;
 }
@@ -901,6 +908,22 @@ async function loadQuestions() {
   }
 }
 
+async function lookupAnonymousIp() {
+  const out = document.querySelector('#anonLookupResult');
+  const ip = document.querySelector('#anonLookupIp')?.value?.trim();
+  if (!out || !ip) return toast('유동 IP를 입력해줘.');
+  try {
+    const data = await api(`/api/dashboard/guilds/${currentGuild().id}/anonymous/lookup?ip=${encodeURIComponent(ip)}`);
+    out.innerHTML = `
+      <article class="command-card">
+        <div><h4>${esc(data.username || '이름 확인 불가')}</h4><p>유저 ID: ${esc(data.userId)} · 유동 IP: ${esc(data.anonIp)}</p></div>
+      </article>
+    `;
+  } catch (error) {
+    out.innerHTML = `<article class="command-card"><div><h4>조회 실패</h4><p>${esc(error.message || '기록을 찾지 못했어요.')}</p></div></article>`;
+  }
+}
+
 function toast(message) {
   const el = document.createElement('div');
   el.className = 'toast';
@@ -967,6 +990,7 @@ app.addEventListener('click', async (event) => {
   if (target.dataset.action === 'test-welcome') return sendWelcomeTest();
   if (target.dataset.action === 'send-question') return sendQuestion();
   if (target.dataset.action === 'load-qna') return loadQuestions();
+  if (target.dataset.action === 'lookup-anon') return lookupAnonymousIp();
 });
 
 app.addEventListener('change', async (event) => {
