@@ -22,13 +22,27 @@ const YUZUHA_BOT_ID = process.env.YUZUHA_BOT_ID || process.env.YUZUHA_CLIENT_ID 
 const BOT_STATUS_URL = process.env.BOT_STATUS_URL || process.env.NATSUMI_BOT_STATUS_URL || process.env.BOT_API_URL || '';
 const OWNER_USER_ID = process.env.OWNER_USER_ID || process.env.NATSUMI_OWNER_ID || '1293232804745838733';
 const DEVELOPER_NOTICE_CHANNEL_ID = process.env.DEVELOPER_NOTICE_CHANNEL_ID || '1371675674393448528';
-const KOREANBOTS_TOKEN = process.env.KOREANBOTS_TOKEN || '';
-const KOREANBOTS_BOT_ID = process.env.KOREANBOTS_BOT_ID || DISCORD_CLIENT_ID || '905355491708903485';
-const HEART_URL = process.env.KOREANBOTS_BOT_PAGE_URL || process.env.HANDIRI_HEART_URL || process.env.HEART_URL || `https://koreanbots.dev/bots/${KOREANBOTS_BOT_ID}`;
+const cleanEnv = (value) => String(value || '').replace(/['"]/g, '').trim();
+const KOREANBOTS_TOKEN = cleanEnv(process.env.KOREANBOTS_TOKEN);
+const KOREANBOTS_BOT_ID = cleanEnv(process.env.KOREANBOTS_BOT_ID) || DISCORD_CLIENT_ID || '905355491708903485';
 const BOT_PROFILES = {
   natsumi: { key: 'natsumi', name: 'Natsumi', botId: NATSUMI_BOT_ID, token: NATSUMI_BOT_TOKEN },
   yuzuha: { key: 'yuzuha', name: 'Yuzuha', botId: YUZUHA_BOT_ID, token: YUZUHA_BOT_TOKEN },
 };
+
+function koreanBotsConfig(botKey = 'natsumi') {
+  const key = normalizeBotKey(botKey);
+  const botId = key === 'yuzuha'
+    ? cleanEnv(process.env.YUZUHA_KOREANBOTS_BOT_ID) || KOREANBOTS_BOT_ID || YUZUHA_BOT_ID
+    : cleanEnv(process.env.NATSUMI_KOREANBOTS_BOT_ID) || KOREANBOTS_BOT_ID || NATSUMI_BOT_ID;
+  const token = key === 'yuzuha'
+    ? cleanEnv(process.env.YUZUHA_KOREANBOTS_TOKEN) || KOREANBOTS_TOKEN
+    : cleanEnv(process.env.NATSUMI_KOREANBOTS_TOKEN) || KOREANBOTS_TOKEN;
+  const heartUrl = key === 'yuzuha'
+    ? cleanEnv(process.env.YUZUHA_KOREANBOTS_BOT_PAGE_URL) || cleanEnv(process.env.KOREANBOTS_BOT_PAGE_URL) || cleanEnv(process.env.HANDIRI_HEART_URL) || cleanEnv(process.env.HEART_URL) || `https://koreanbots.dev/bots/${botId}`
+    : cleanEnv(process.env.NATSUMI_KOREANBOTS_BOT_PAGE_URL) || cleanEnv(process.env.KOREANBOTS_BOT_PAGE_URL) || cleanEnv(process.env.HANDIRI_HEART_URL) || cleanEnv(process.env.HEART_URL) || `https://koreanbots.dev/bots/${botId}`;
+  return { botId, token, heartUrl };
+}
 const DISCORD_ADMINISTRATOR = 0x8n;
 const DISCORD_MANAGE_GUILD = 0x20n;
 const DISCORD_VIEW_CHANNEL = 0x400n;
@@ -173,22 +187,25 @@ function isOwner(req) {
   return Boolean(OWNER_USER_ID && req.session?.discordUser?.id === OWNER_USER_ID);
 }
 
-async function checkKoreanBotsVote(userId) {
-  if (!userId || !KOREANBOTS_BOT_ID) return false;
+async function checkKoreanBotsVote(userId, botKey = 'natsumi') {
+  const config = koreanBotsConfig(botKey);
+  if (!userId || !config.botId) return false;
   const urls = [
-    `https://koreanbots.dev/api/v2/bots/${KOREANBOTS_BOT_ID}/vote?userID=${userId}`,
-    `https://koreanbots.dev/api/v2/bots/${KOREANBOTS_BOT_ID}/votes?userID=${userId}`,
+    `https://koreanbots.dev/api/v2/bots/${config.botId}/vote?userID=${userId}`,
+    `https://koreanbots.dev/api/v2/bots/${config.botId}/votes?userID=${userId}`,
   ];
   for (const url of urls) {
-    try {
-      const res = await fetch(url, {
-        headers: KOREANBOTS_TOKEN ? { Authorization: KOREANBOTS_TOKEN } : {},
-        signal: AbortSignal.timeout?.(5000),
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (Boolean(data?.data?.voted || data?.voted || data?.vote || data?.result)) return true;
-    } catch {}
+    for (const authorization of [config.token, config.token ? `Bearer ${config.token}` : ''].filter(Boolean)) {
+      try {
+        const res = await fetch(url, {
+          headers: authorization ? { Authorization: authorization, 'User-Agent': 'NatsumiDashboard/1.0' } : {},
+          signal: AbortSignal.timeout?.(5000),
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (Boolean(data?.data?.voted || data?.voted || data?.vote || data?.result)) return true;
+      } catch {}
+    }
   }
   return false;
 }
@@ -404,8 +421,10 @@ app.get('/api/auth/me', (req, res) => res.json({
   canUseDashboard: Boolean(req.session?.discordUser?.id),
 }));
 app.get('/api/heart-status', requireLogin, async (req, res) => {
-  const verified = isOwner(req) || await checkKoreanBotsVote(req.session.discordUser.id);
-  res.json({ verified, heartUrl: HEART_URL });
+  const botKey = requestedBotKey(req);
+  const config = koreanBotsConfig(botKey);
+  const verified = isOwner(req) || await checkKoreanBotsVote(req.session.discordUser.id, botKey);
+  res.json({ verified, heartUrl: config.heartUrl, botKey });
 });
 app.get('/api/bot-status', async (req, res) => {
   const botKey = requestedBotKey(req);

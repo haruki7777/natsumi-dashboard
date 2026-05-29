@@ -744,7 +744,7 @@ async function loadHeartStatus() {
     return;
   }
   try {
-    state.heart = await api('/api/heart-status');
+    state.heart = await api(withBot('/api/heart-status'));
   } catch {
     state.heart = { ...state.heart, verified: false };
   }
@@ -936,6 +936,7 @@ app.addEventListener('click', async (event) => {
   }
   if (target.dataset.action === 'refresh-heart') {
     await loadHeartStatus();
+    if (state.heart.verified) toast('한디리 하트 확인 완료! 설정을 계속 사용할 수 있어요.');
     return dashboard();
   }
   if (target.dataset.tab) {
@@ -983,7 +984,7 @@ app.addEventListener('change', async (event) => {
   if (event.target.id === 'botSelect' && state.canUseDashboard) {
     state.selectedBot = event.target.value === 'natsumi' ? 'natsumi' : 'yuzuha';
     localStorage.setItem(selectedBotKey, state.selectedBot);
-    await Promise.all([loadGuilds(), loadBotStatus()]);
+    await Promise.all([loadGuilds(), loadBotStatus(), loadHeartStatus()]);
     await loadSettings();
     dashboard();
   }
