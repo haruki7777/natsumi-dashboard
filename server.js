@@ -398,7 +398,11 @@ app.get('/auth/discord/callback', (req, res) => finishDiscordAuth(req, res, `${p
 app.get('/auth/discord/dashboard', (req, res) => startDiscordAuth(req, res, `${publicBaseUrl(req)}/`, `${publicBaseUrl(req)}/auth/discord/dashboard/callback`));
 app.get('/auth/discord/dashboard/callback', (req, res) => finishDiscordAuth(req, res, `${publicBaseUrl(req)}/auth/discord/dashboard/callback`));
 app.post('/auth/logout', (req, res) => req.session.destroy(() => res.json({ ok: true })));
-app.get('/api/auth/me', (req, res) => res.json({ user: req.session?.discordUser || null, isOwner: isOwner(req) }));
+app.get('/api/auth/me', (req, res) => res.json({
+  user: req.session?.discordUser || null,
+  isOwner: isOwner(req),
+  canUseDashboard: Boolean(req.session?.discordUser?.id),
+}));
 app.get('/api/heart-status', requireLogin, async (req, res) => {
   const verified = isOwner(req) || await checkKoreanBotsVote(req.session.discordUser.id);
   res.json({ verified, heartUrl: HEART_URL });
@@ -458,7 +462,11 @@ app.get('/api/bot-status', async (req, res) => {
   });
 });
 
-app.get('/api/dashboard/session', (req, res) => res.json({ user: req.session?.discordUser || null, isOwner: isOwner(req) }));
+app.get('/api/dashboard/session', (req, res) => res.json({
+  user: req.session?.discordUser || null,
+  isOwner: isOwner(req),
+  canUseDashboard: Boolean(req.session?.discordUser?.id),
+}));
 app.get('/api/dashboard/bots', (_req, res) => {
   res.json({
     bots: Object.values(BOT_PROFILES).map((bot) => ({
@@ -503,7 +511,7 @@ app.post('/api/developer-announcements', requireLogin, requireOwner, async (req,
   res.json({ ok: true, announcement: row, sent: sent.ok, error: sent.ok ? undefined : sent.error });
 });
 
-app.get('/api/dashboard/guilds', requireLogin, requireOwner, async (req, res) => {
+app.get('/api/dashboard/guilds', requireLogin, async (req, res) => {
   const botKey = requestedBotKey(req);
   const botProfile = BOT_PROFILES[botKey];
   const botConfigured = Boolean(botProfile?.token);
@@ -523,7 +531,7 @@ app.get('/api/dashboard/guilds', requireLogin, requireOwner, async (req, res) =>
   res.json({ guilds, bot: { key: botKey, botId: botProfile?.botId || null, name: botProfile?.name || 'Bot', configured: botConfigured } });
 });
 
-app.get('/api/dashboard/guilds/:guildId/settings', requireLogin, requireOwner, requireGuildAdmin, async (req, res) => {
+app.get('/api/dashboard/guilds/:guildId/settings', requireLogin, requireGuildAdmin, async (req, res) => {
   const botKey = requestedBotKey(req);
   const settings = await DashboardSettings.findOneAndUpdate(
     { guildId: req.params.guildId },
@@ -533,7 +541,7 @@ app.get('/api/dashboard/guilds/:guildId/settings', requireLogin, requireOwner, r
   res.json({ botKey, settings: settingsForBot(settings, botKey) });
 });
 
-app.patch('/api/dashboard/guilds/:guildId/settings', requireLogin, requireOwner, requireGuildAdmin, async (req, res) => {
+app.patch('/api/dashboard/guilds/:guildId/settings', requireLogin, requireGuildAdmin, async (req, res) => {
   const botKey = requestedBotKey(req);
   const next = req.body?.settings || {};
   const update = { [`bots.${botKey}`]: next, guildId: req.params.guildId };
@@ -555,7 +563,7 @@ app.patch('/api/dashboard/guilds/:guildId/settings', requireLogin, requireOwner,
   res.json({ ok: true, botKey, settings: next });
 });
 
-app.post('/api/dashboard/guilds/:guildId/notice', requireLogin, requireOwner, requireGuildAdmin, async (req, res) => {
+app.post('/api/dashboard/guilds/:guildId/notice', requireLogin, requireGuildAdmin, async (req, res) => {
   const botKey = requestedBotKey(req);
   const message = String(req.body?.notice?.message || '').trim().slice(0, 1800);
   const channelId = String(req.body?.notice?.channelId || '').trim();
@@ -573,12 +581,12 @@ app.post('/api/dashboard/guilds/:guildId/notice', requireLogin, requireOwner, re
   res.json({ ok: sent.ok, notice: row, messageId: sent.messageId, error: sent.error });
 });
 
-app.get('/api/dashboard/guilds/:guildId/questions', requireLogin, requireOwner, requireGuildAdmin, async (req, res) => {
+app.get('/api/dashboard/guilds/:guildId/questions', requireLogin, requireGuildAdmin, async (req, res) => {
   const rows = await DashboardQuestion.find({ guildId: req.params.guildId }).sort({ createdAt: -1 }).limit(50).lean();
   res.json({ questions: rows });
 });
 
-app.post('/api/dashboard/guilds/:guildId/questions', requireLogin, requireOwner, async (req, res) => {
+app.post('/api/dashboard/guilds/:guildId/questions', requireLogin, requireGuildAdmin, async (req, res) => {
   const question = String(req.body?.question || '').trim().slice(0, 1000);
   if (!question) return res.status(400).json({ error: '질문 내용이 비어 있어.' });
   const row = await DashboardQuestion.create({
@@ -590,7 +598,7 @@ app.post('/api/dashboard/guilds/:guildId/questions', requireLogin, requireOwner,
   res.json({ ok: true, question: row });
 });
 
-app.post('/api/dashboard/guilds/:guildId/questions/:id/answer', requireLogin, requireOwner, async (req, res) => {
+app.post('/api/dashboard/guilds/:guildId/questions/:id/answer', requireLogin, requireGuildAdmin, async (req, res) => {
   const answer = String(req.body?.answer || '').trim().slice(0, 1800);
   if (!answer) return res.status(400).json({ error: '답변 내용이 비어 있어.' });
   const row = await DashboardQuestion.findOneAndUpdate(

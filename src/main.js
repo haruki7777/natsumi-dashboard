@@ -1,4 +1,4 @@
-﻿import './style.css';
+import './style.css';
 
 const DASHBOARD_SERVER_URL = 'http://natsumidashboard.kro.kr:25901';
 const isLocalPreview = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
@@ -8,6 +8,7 @@ const themeKey = 'natsumi-dashboard-theme';
 const selectedGuildKey = 'natsumi-dashboard-selected-guild';
 const selectedBotKey = 'natsumi-dashboard-selected-bot';
 const app = document.getElementById('app');
+const initialParams = new URLSearchParams(window.location.search);
 
 const commandList = [
   ['도움말', '기본 안내와 링크를 보여줘요.', 'general'],
@@ -162,13 +163,14 @@ const state = {
   guilds: [],
   selectedGuild: null,
   settings: structuredClone(defaultSettings),
-  activeTab: 'notice',
+  activeTab: dashboardTabs.some(([key]) => key === initialParams.get('tab')) ? initialParams.get('tab') : 'notice',
   menuOpen: false,
   isOwner: false,
+  canUseDashboard: false,
   announcements: [],
   botStatus: null,
   bots: structuredClone(defaultBots),
-  selectedBot: localStorage.getItem(selectedBotKey) || 'natsumi',
+  selectedBot: initialParams.get('bot') === 'yuzuha' ? 'yuzuha' : (localStorage.getItem(selectedBotKey) || 'natsumi'),
   heart: { verified: false, heartUrl: 'https://koreanbots.dev/bots/905355491708903485' },
 };
 
@@ -263,7 +265,7 @@ function shell(content) {
             <input type="checkbox" data-action="theme-toggle" ${state.theme === 'dark' ? 'checked' : ''}>
             <span></span>
           </label>
-          ${state.isOwner ? `<button class="icon-menu-btn ${state.menuOpen ? 'active' : ''}" data-action="toggle-menu" type="button" aria-label="메뉴">☰</button>` : ''}
+          ${state.canUseDashboard ? `<button class="icon-menu-btn ${state.menuOpen ? 'active' : ''}" data-action="toggle-menu" type="button" aria-label="메뉴">☰</button>` : ''}
           ${state.loggedIn
             ? `<div class="login-pill"><img src="${esc(avatarUrl())}" alt="" /><b>${esc(profileName)}</b></div>`
             : `<button class="primary-btn" data-action="login" type="button">Discord Login</button>`}
@@ -298,7 +300,7 @@ function publicNoticePage() {
       <p class="hero-desc">${esc(currentBotProfile().name || '유즈하')}의 최신 소식과 점검 안내를 먼저 확인할 수 있어요.</p>
       <div class="hero-actions">
         <button class="soft-btn" data-action="refresh-public" type="button">새로고침</button>
-        ${state.isOwner ? '<button class="primary-btn" data-action="toggle-menu" type="button">관리 메뉴</button>' : ''}
+        ${state.canUseDashboard ? '<button class="primary-btn" data-action="toggle-menu" type="button">관리 메뉴</button>' : ''}
       </div>
       ${renderDeveloperAnnouncements()}
     </main>
@@ -306,7 +308,7 @@ function publicNoticePage() {
 }
 
 function dashboard() {
-  if (!state.isOwner) return publicNoticePage();
+  if (!state.canUseDashboard) return publicNoticePage();
   const guild = currentGuild();
   app.innerHTML = shell(`
     <main class="dashboard-page">
@@ -646,11 +648,13 @@ async function loadSession() {
     state.loggedIn = Boolean(data.user);
     state.profile = data.user || null;
     state.isOwner = Boolean(data.isOwner);
-    if (state.loggedIn && state.isOwner) state.menuOpen = true;
+    state.canUseDashboard = Boolean(data.canUseDashboard || data.user);
+    if (state.loggedIn && state.canUseDashboard) state.menuOpen = true;
   } catch {
     state.loggedIn = false;
     state.profile = null;
     state.isOwner = false;
+    state.canUseDashboard = false;
   }
 }
 
@@ -675,7 +679,7 @@ async function loadBots() {
 }
 
 async function loadGuilds() {
-  if (!state.isOwner) {
+  if (!state.canUseDashboard) {
     state.guilds = [];
     state.selectedGuild = null;
     return;
@@ -692,7 +696,7 @@ async function loadGuilds() {
 }
 
 async function loadSettings() {
-  if (!state.isOwner || currentGuild().botPresent === false || currentGuild().botPresent === null) {
+  if (!state.canUseDashboard || currentGuild().botPresent === false || currentGuild().botPresent === null) {
     state.settings = structuredClone(defaultSettings);
     return;
   }
@@ -841,7 +845,7 @@ function collectSettingsFromDom() {
 }
 
 async function saveSettings() {
-  if (!state.isOwner) return publicNoticePage();
+  if (!state.canUseDashboard) return publicNoticePage();
   if (currentGuild().botPresent === false) return toast(`${currentBotProfile().name}를 먼저 서버에 초대해줘.`);
   if (premiumTabs.has(state.activeTab) && !state.heart.verified) {
     toast('한디리 하트를 확인해야 사용할 수 있어요.');
@@ -911,19 +915,19 @@ app.addEventListener('click', async (event) => {
 
   if (target.dataset.action === 'notice') {
     state.activeTab = 'notice';
-    return state.isOwner ? dashboard() : publicNoticePage();
+    return state.canUseDashboard ? dashboard() : publicNoticePage();
   }
   if (target.dataset.action === 'login') return login();
   if (target.dataset.action === 'toggle-menu') {
     state.menuOpen = !state.menuOpen;
-    return state.isOwner ? dashboard() : publicNoticePage();
+    return state.canUseDashboard ? dashboard() : publicNoticePage();
   }
   if (target.dataset.action === 'refresh-public') {
     await Promise.all([loadSession(), loadBots(), loadDeveloperAnnouncements(), loadBotStatus()]);
     await loadHeartStatus();
-    return state.isOwner ? dashboard() : publicNoticePage();
+    return state.canUseDashboard ? dashboard() : publicNoticePage();
   }
-  if (!state.isOwner) return publicNoticePage();
+  if (!state.canUseDashboard) return publicNoticePage();
   if (target.dataset.action === 'refresh') {
     await Promise.all([loadSession(), loadBots(), loadGuilds(), loadDeveloperAnnouncements(), loadBotStatus()]);
     await loadHeartStatus();
@@ -967,16 +971,16 @@ app.addEventListener('click', async (event) => {
 app.addEventListener('change', async (event) => {
   if (event.target.matches('[data-action="theme-toggle"]')) {
     applyTheme(event.target.checked ? 'dark' : 'light');
-    return state.isOwner ? dashboard() : publicNoticePage();
+    return state.canUseDashboard ? dashboard() : publicNoticePage();
   }
-  if (event.target.id === 'guildSelect' && state.isOwner) {
+  if (event.target.id === 'guildSelect' && state.canUseDashboard) {
     state.selectedGuild = manageableGuilds().find((guild) => guild.id === event.target.value) || manageableGuilds()[0] || fallbackGuilds[0];
     localStorage.setItem(selectedGuildKey, state.selectedGuild.id);
     state.activeTab = state.selectedGuild.botPresent === false ? state.activeTab : 'notice';
     await loadSettings();
     dashboard();
   }
-  if (event.target.id === 'botSelect' && state.isOwner) {
+  if (event.target.id === 'botSelect' && state.canUseDashboard) {
     state.selectedBot = event.target.value === 'natsumi' ? 'natsumi' : 'yuzuha';
     localStorage.setItem(selectedBotKey, state.selectedBot);
     await Promise.all([loadGuilds(), loadBotStatus()]);
@@ -993,7 +997,7 @@ app.addEventListener('change', async (event) => {
 applyTheme();
 await Promise.all([loadSession(), loadBots(), loadDeveloperAnnouncements(), loadBotStatus()]);
 await loadHeartStatus();
-if (state.isOwner) {
+if (state.canUseDashboard) {
   await loadBots();
   await loadGuilds();
   await loadSettings();
