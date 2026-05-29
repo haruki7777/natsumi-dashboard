@@ -646,6 +646,7 @@ async function loadSession() {
     state.loggedIn = Boolean(data.user);
     state.profile = data.user || null;
     state.isOwner = Boolean(data.isOwner);
+    if (state.loggedIn && state.isOwner) state.menuOpen = true;
   } catch {
     state.loggedIn = false;
     state.profile = null;
