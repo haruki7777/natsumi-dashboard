@@ -1,0 +1,6 @@
+name = "natsumi-dashboard-proxy"
+main = "worker.js"
+compatibility_date = "2026-05-30"
+
+[vars]
+ORIGIN_URL = "http://45.13.236.245:25901"
