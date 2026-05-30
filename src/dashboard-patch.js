@@ -207,13 +207,34 @@ function openPremiumTabByName(tab = pendingPremiumTab) {
   const button = findMenuButton(safeTab);
   if (!button) return false;
 
+  const message = document.querySelector('.heart-lock p');
+  if (message) {
+    message.textContent = '하트 인증이 확인됐어. 설정 화면을 여는 중이야.';
+  }
+
   bypassPremiumTabClick = true;
   button.click();
+
+  const retryOpen = () => {
+    if (!document.querySelector('.heart-lock')) return;
+
+    const retryButton = findMenuButton(safeTab);
+    if (retryButton) retryButton.click();
+  };
+
+  window.setTimeout(retryOpen, 150);
+  window.setTimeout(retryOpen, 450);
+
   window.setTimeout(() => {
     bypassPremiumTabClick = false;
-    pendingPremiumTab = null;
+
+    if (!document.querySelector('.heart-lock')) {
+      pendingPremiumTab = null;
+    }
+
     queueSyncHeartLock(false);
-  }, 0);
+  }, 800);
+
   return true;
 }
 
