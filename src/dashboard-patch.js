@@ -17,6 +17,7 @@ const heartCache = {
 let renderQueued = false;
 let checkingHeart = false;
 let bypassPremiumTabClick = false;
+let pendingPremiumTab = null;
 
 function botKeyFromValue(value) {
   return value === 'yuzuha' ? 'yuzuha' : 'natsumi';
@@ -156,12 +157,13 @@ function syncLockedMenuMarks() {
   });
 }
 
-function renderHeartLock(botKey, status) {
+function renderHeartLock(botKey, status, tab = pendingPremiumTab || currentActiveTab()) {
   const botName = botKey === 'yuzuha' ? '유즈하' : '나츠미';
+  const safeTab = premiumTabs.has(tab) ? tab : 'settings';
   return `
-    <section class="tool-card heart-lock">
+    <section class="tool-card heart-lock" data-pending-tab="${safeTab}">
       <h3>${botName} 한디리 하트 인증이 필요해요</h3>
-      <p>${botName} 설정은 하트 인증 전에는 열 수 없어요. 아래 버튼으로 하트를 누른 뒤 다시 확인하면 설정 메뉴가 열려요.</p>
+      <p>${botName} 설정은 하트 인증 전에는 열 수 없어요. 아래 버튼으로 하트를 누른 뒤 다시 확인하면 방금 열려던 설정 메뉴가 자동으로 열려요.</p>
       <div class="form-actions">
         <a class="primary-btn" href="${status.heartUrl || defaultHeartUrls[botKey]}" target="_blank" rel="noreferrer">${botName} 하트 누르기</a>
         <button class="soft-btn" data-dashboard-patch-action="refresh-heart" type="button">하트 다시 확인</button>
@@ -170,9 +172,10 @@ function renderHeartLock(botKey, status) {
   `;
 }
 
-function showHeartLock(botKey = currentBotKey(), status = heartCache[botKey]) {
+function showHeartLock(botKey = currentBotKey(), status = heartCache[botKey], tab = pendingPremiumTab || currentActiveTab()) {
+  if (premiumTabs.has(tab)) pendingPremiumTab = tab;
   const panel = document.querySelector('#panel');
-  if (panel) panel.innerHTML = renderHeartLock(botKey, status || heartCache[botKey]);
+  if (panel) panel.innerHTML = renderHeartLock(botKey, status || heartCache[botKey], pendingPremiumTab);
   syncHeartBadge();
   syncLockedMenuMarks();
 }
@@ -195,6 +198,25 @@ function syncHeartBadge() {
   badge.textContent = `${botKey === 'yuzuha' ? '유즈하' : '나츠미'} 하트 ${status?.verified ? '인증됨' : '미인증'}`;
 }
 
+function findMenuButton(tab) {
+  return [...document.querySelectorAll('.menu-tile[data-tab]')].find((button) => button.dataset.tab === tab) || null;
+}
+
+function openPremiumTabByName(tab = pendingPremiumTab) {
+  const safeTab = premiumTabs.has(tab) ? tab : 'settings';
+  const button = findMenuButton(safeTab);
+  if (!button) return false;
+
+  bypassPremiumTabClick = true;
+  button.click();
+  window.setTimeout(() => {
+    bypassPremiumTabClick = false;
+    pendingPremiumTab = null;
+    queueSyncHeartLock(false);
+  }, 0);
+  return true;
+}
+
 async function syncHeartLock(force = false) {
   const botKey = currentBotKey();
   const tab = currentActiveTab();
@@ -210,10 +232,13 @@ async function syncHeartLock(force = false) {
   const status = await fetchHeartStatus(botKey, force);
   syncHeartBadge();
   syncLockedMenuMarks();
-  if (status.verified) return;
+  if (status.verified) {
+    if (panel.querySelector('.heart-lock') && pendingPremiumTab) openPremiumTabByName(pendingPremiumTab);
+    return;
+  }
 
   const alreadyLocked = panel.querySelector('.heart-lock');
-  if (!alreadyLocked) showHeartLock(botKey, status);
+  if (!alreadyLocked) showHeartLock(botKey, status, tab);
 }
 
 function queueSyncHeartLock(force = false) {
@@ -227,22 +252,19 @@ function queueSyncHeartLock(force = false) {
 }
 
 async function openPremiumTabAfterHeartCheck(button) {
+  const targetTab = button.dataset.tab;
+  pendingPremiumTab = targetTab;
   const botKey = currentBotKey();
   const status = await fetchHeartStatus(botKey, true);
   syncHeartBadge();
   syncLockedMenuMarks();
 
   if (!status.verified) {
-    showHeartLock(botKey, status);
+    showHeartLock(botKey, status, targetTab);
     return;
   }
 
-  bypassPremiumTabClick = true;
-  button.click();
-  window.setTimeout(() => {
-    bypassPremiumTabClick = false;
-    queueSyncHeartLock(false);
-  }, 0);
+  openPremiumTabByName(targetTab);
 }
 
 async function logout() {
@@ -271,9 +293,17 @@ document.addEventListener('click', async (event) => {
   if (refreshHeartButton) {
     event.preventDefault();
     event.stopPropagation();
-    await syncHeartLock(true);
-    const status = heartCache[currentBotKey()];
-    if (status?.verified) queueSyncHeartLock(false);
+    const lockedTab = document.querySelector('.heart-lock')?.dataset?.pendingTab;
+    if (premiumTabs.has(lockedTab)) pendingPremiumTab = lockedTab;
+    const botKey = currentBotKey();
+    const status = await fetchHeartStatus(botKey, true);
+    syncHeartBadge();
+    syncLockedMenuMarks();
+    if (status?.verified) {
+      openPremiumTabByName(pendingPremiumTab || lockedTab || 'settings');
+    } else {
+      showHeartLock(botKey, status, pendingPremiumTab || lockedTab || 'settings');
+    }
     return;
   }
 
@@ -297,7 +327,7 @@ document.addEventListener('click', async (event) => {
     if (!status.verified) {
       event.preventDefault();
       event.stopPropagation();
-      showHeartLock(currentBotKey(), status);
+      showHeartLock(currentBotKey(), status, currentActiveTab());
     }
   }
 }, true);
