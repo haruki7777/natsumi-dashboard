@@ -85,7 +85,7 @@ async function fetchHeartStatus(botKey = currentBotKey(), force = false) {
   if (!force && heartCache[key]?.checked) return heartCache[key];
   checkingHeart = true;
   try {
-    const response = await originalFetch(`${API_BASE}/api/heart-status?bot=${encodeURIComponent(key)}`, {
+    const response = await originalFetch(`${API_BASE}/api/heart-status?bot=${encodeURIComponent(key)}&refresh=${Date.now()}`, {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
     });
