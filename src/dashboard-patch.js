@@ -16,6 +16,7 @@ const heartCache = {
 
 let renderQueued = false;
 let checkingHeart = false;
+let bypassPremiumTabClick = false;
 
 function botKeyFromValue(value) {
   return value === 'yuzuha' ? 'yuzuha' : 'natsumi';
@@ -116,6 +117,10 @@ function injectPatchStyle() {
     }
     .heart-status-badge.ok { color: #e7497d; }
     .heart-status-badge.locked { color: #8b5a00; }
+    .menu-tile[data-heart-locked="1"]::after {
+      content: ' 🔒';
+      opacity: .8;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -142,18 +147,34 @@ function syncLogoutButton() {
   topActions.insertBefore(button, loginPill);
 }
 
+function syncLockedMenuMarks() {
+  const status = heartCache[currentBotKey()];
+  document.querySelectorAll('.menu-tile[data-tab]').forEach((button) => {
+    const locked = premiumTabs.has(button.dataset.tab) && !status?.verified;
+    if (locked) button.dataset.heartLocked = '1';
+    else delete button.dataset.heartLocked;
+  });
+}
+
 function renderHeartLock(botKey, status) {
   const botName = botKey === 'yuzuha' ? '유즈하' : '나츠미';
   return `
     <section class="tool-card heart-lock">
       <h3>${botName} 한디리 하트 인증이 필요해요</h3>
-      <p>${botName} 설정은 선택한 봇 기준으로 한디리 하트를 눌렀는지 확인한 뒤 사용할 수 있어요. 봇을 바꾸면 하트 인증도 봇별로 다시 확인해요.</p>
+      <p>${botName} 설정은 하트 인증 전에는 열 수 없어요. 아래 버튼으로 하트를 누른 뒤 다시 확인하면 설정 메뉴가 열려요.</p>
       <div class="form-actions">
         <a class="primary-btn" href="${status.heartUrl || defaultHeartUrls[botKey]}" target="_blank" rel="noreferrer">${botName} 하트 누르기</a>
         <button class="soft-btn" data-dashboard-patch-action="refresh-heart" type="button">하트 다시 확인</button>
       </div>
     </section>
   `;
+}
+
+function showHeartLock(botKey = currentBotKey(), status = heartCache[botKey]) {
+  const panel = document.querySelector('#panel');
+  if (panel) panel.innerHTML = renderHeartLock(botKey, status || heartCache[botKey]);
+  syncHeartBadge();
+  syncLockedMenuMarks();
 }
 
 function syncHeartBadge() {
@@ -179,6 +200,7 @@ async function syncHeartLock(force = false) {
   const tab = currentActiveTab();
   if (!premiumTabs.has(tab)) {
     syncHeartBadge();
+    syncLockedMenuMarks();
     return;
   }
 
@@ -187,10 +209,11 @@ async function syncHeartLock(force = false) {
 
   const status = await fetchHeartStatus(botKey, force);
   syncHeartBadge();
+  syncLockedMenuMarks();
   if (status.verified) return;
 
   const alreadyLocked = panel.querySelector('.heart-lock');
-  if (!alreadyLocked) panel.innerHTML = renderHeartLock(botKey, status);
+  if (!alreadyLocked) showHeartLock(botKey, status);
 }
 
 function queueSyncHeartLock(force = false) {
@@ -200,6 +223,25 @@ function queueSyncHeartLock(force = false) {
     renderQueued = false;
     syncLogoutButton();
     syncHeartLock(force);
+  }, 0);
+}
+
+async function openPremiumTabAfterHeartCheck(button) {
+  const botKey = currentBotKey();
+  const status = await fetchHeartStatus(botKey, true);
+  syncHeartBadge();
+  syncLockedMenuMarks();
+
+  if (!status.verified) {
+    showHeartLock(botKey, status);
+    return;
+  }
+
+  bypassPremiumTabClick = true;
+  button.click();
+  window.setTimeout(() => {
+    bypassPremiumTabClick = false;
+    queueSyncHeartLock(false);
   }, 0);
 }
 
@@ -230,6 +272,16 @@ document.addEventListener('click', async (event) => {
     event.preventDefault();
     event.stopPropagation();
     await syncHeartLock(true);
+    const status = heartCache[currentBotKey()];
+    if (status?.verified) queueSyncHeartLock(false);
+    return;
+  }
+
+  const tabButton = event.target.closest('.menu-tile[data-tab]');
+  if (tabButton && premiumTabs.has(tabButton.dataset.tab) && !bypassPremiumTabClick) {
+    event.preventDefault();
+    event.stopPropagation();
+    await openPremiumTabAfterHeartCheck(tabButton);
     return;
   }
 
@@ -245,7 +297,7 @@ document.addEventListener('click', async (event) => {
     if (!status.verified) {
       event.preventDefault();
       event.stopPropagation();
-      document.querySelector('#panel').innerHTML = renderHeartLock(currentBotKey(), status);
+      showHeartLock(currentBotKey(), status);
     }
   }
 }, true);
