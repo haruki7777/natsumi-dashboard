@@ -13,6 +13,7 @@ const heartCache = {
   natsumi: { verified: false, heartUrl: defaultHeartUrls.natsumi, checked: false },
   yuzuha: { verified: false, heartUrl: defaultHeartUrls.yuzuha, checked: false },
 };
+const emojiChannelCache = new Map();
 
 let renderQueued = false;
 let checkingHeart = false;
@@ -33,6 +34,19 @@ function currentActiveTab() {
   return document.querySelector('.menu-tile.active')?.dataset?.tab
     || new URLSearchParams(window.location.search).get('tab')
     || 'notice';
+}
+
+function selectedGuildId() {
+  return document.querySelector('#guildSelect')?.value || localStorage.getItem('natsumi-dashboard-selected-guild') || 'preview';
+}
+
+function esc(value = '') {
+  return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function apiUrl(path) {
+  const sep = path.includes('?') ? '&' : '?';
+  return `${API_BASE}${path}${sep}bot=${encodeURIComponent(currentBotKey())}`;
 }
 
 function isHeartStatusRequest(input) {
@@ -106,22 +120,22 @@ function injectPatchStyle() {
   style.textContent = `
     .logout-btn { white-space: nowrap; }
     .heart-status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-size: 12px;
-      font-weight: 800;
-      background: rgba(255,255,255,.55);
-      border: 1px solid rgba(255,255,255,.35);
+      display: inline-flex; align-items: center; gap: 6px; border-radius: 999px;
+      padding: 8px 12px; font-size: 12px; font-weight: 800;
+      background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.35);
     }
     .heart-status-badge.ok { color: #e7497d; }
     .heart-status-badge.locked { color: #8b5a00; }
-    .menu-tile[data-heart-locked="1"]::after {
-      content: ' 🔒';
-      opacity: .8;
+    .menu-tile[data-heart-locked="1"]::after { content: ' 🔒'; opacity: .8; }
+    .emoji-channel-panel { margin-top: 18px; }
+    .emoji-channel-list { display: grid; gap: 10px; margin-top: 12px; }
+    .emoji-channel-row {
+      display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 16px; background: rgba(255,255,255,.45);
+      border: 1px solid rgba(255,255,255,.35);
     }
+    .emoji-channel-row b { display:block; }
+    .emoji-channel-row small { opacity:.72; }
   `;
   document.head.appendChild(style);
 }
@@ -208,16 +222,13 @@ function openPremiumTabByName(tab = pendingPremiumTab) {
   if (!button) return false;
 
   const message = document.querySelector('.heart-lock p');
-  if (message) {
-    message.textContent = '하트 인증이 확인됐어. 설정 화면을 여는 중이야.';
-  }
+  if (message) message.textContent = '하트 인증이 확인됐어. 설정 화면을 여는 중이야.';
 
   bypassPremiumTabClick = true;
   button.click();
 
   const retryOpen = () => {
     if (!document.querySelector('.heart-lock')) return;
-
     const retryButton = findMenuButton(safeTab);
     if (retryButton) retryButton.click();
   };
@@ -227,11 +238,7 @@ function openPremiumTabByName(tab = pendingPremiumTab) {
 
   window.setTimeout(() => {
     bypassPremiumTabClick = false;
-
-    if (!document.querySelector('.heart-lock')) {
-      pendingPremiumTab = null;
-    }
-
+    if (!document.querySelector('.heart-lock')) pendingPremiumTab = null;
     queueSyncHeartLock(false);
   }, 800);
 
@@ -268,6 +275,7 @@ function queueSyncHeartLock(force = false) {
   window.setTimeout(() => {
     renderQueued = false;
     syncLogoutButton();
+    injectEmojiChannelPanel();
     syncHeartLock(force);
   }, 0);
 }
@@ -290,18 +298,97 @@ async function openPremiumTabAfterHeartCheck(button) {
 
 async function logout() {
   try {
-    await originalFetch(`${API_BASE}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch {
-    // 화면 상태 정리를 위해 새로고침은 계속 진행한다.
-  }
+    await originalFetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+  } catch {}
   window.location.href = window.location.pathname;
 }
 
+async function loadEmojiChannelSettings(guildId = selectedGuildId()) {
+  const key = `${currentBotKey()}:${guildId}`;
+  if (emojiChannelCache.has(key)) return emojiChannelCache.get(key);
+  try {
+    const res = await originalFetch(apiUrl(`/api/dashboard/guilds/${guildId}/emoji-upscale/channels`), { credentials: 'include' });
+    const data = res.ok ? await res.json() : { channels: [] };
+    emojiChannelCache.set(key, data.channels || []);
+  } catch {
+    emojiChannelCache.set(key, []);
+  }
+  return emojiChannelCache.get(key);
+}
+
+function channelRowsFromDom() {
+  return [...document.querySelectorAll('#emojiChannelSettings [data-channel-id]')].map((row) => ({
+    channelId: row.dataset.channelId,
+    enabled: row.querySelector('input[type="checkbox"]')?.checked !== false,
+    webhookName: document.querySelector('#emojiWebhookName')?.value?.trim() || 'Natsumi Emoji Upscaler',
+  }));
+}
+
+async function saveEmojiChannelSettings() {
+  const guildId = selectedGuildId();
+  const rows = channelRowsFromDom();
+  const res = await originalFetch(apiUrl(`/api/dashboard/guilds/${guildId}/emoji-upscale/channels`), {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ replace: true, channels: rows }),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  const data = await res.json();
+  emojiChannelCache.set(`${currentBotKey()}:${guildId}`, data.channels || rows);
+}
+
+async function injectEmojiChannelPanel() {
+  if (currentActiveTab() !== 'emoji') return;
+  const panel = document.querySelector('#panel');
+  if (!panel || panel.querySelector('#emojiChannelSettings')) return;
+  const textChannels = [...document.querySelectorAll('#emojiChannel option')]
+    .map((option) => ({ id: option.value, name: option.textContent.replace(/^#\s*/, '') }))
+    .filter((channel) => /^\d{15,25}$/.test(channel.id));
+  const settings = await loadEmojiChannelSettings();
+  const map = new Map(settings.map((row) => [row.channelId, row]));
+  const html = `
+    <section class="tool-card emoji-channel-panel" id="emojiChannelSettings">
+      <div class="split-head">
+        <div>
+          <h4>채널별 이모지 업스케일</h4>
+          <p>전체 업스케일이 켜져 있어도, 꺼둔 채널에서는 이모지 확대가 반응하지 않아요.</p>
+        </div>
+        <button class="soft-btn" data-dashboard-patch-action="save-emoji-channels" type="button">채널별 설정 저장</button>
+      </div>
+      <div class="emoji-channel-list">
+        ${textChannels.map((channel) => {
+          const row = map.get(channel.id);
+          const checked = row?.enabled !== false;
+          return `
+            <label class="emoji-channel-row" data-channel-id="${esc(channel.id)}">
+              <span><b># ${esc(channel.name)}</b><small>${esc(channel.id)}</small></span>
+              <input type="checkbox" ${checked ? 'checked' : ''}>
+            </label>
+          `;
+        }).join('') || '<p>표시할 텍스트 채널이 없어요.</p>'}
+      </div>
+    </section>
+  `;
+  panel.insertAdjacentHTML('beforeend', html);
+}
+
 document.addEventListener('click', async (event) => {
+  const saveEmojiChannels = event.target.closest('[data-dashboard-patch-action="save-emoji-channels"]');
+  if (saveEmojiChannels) {
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      await saveEmojiChannelSettings();
+      saveEmojiChannels.textContent = '저장 완료';
+      setTimeout(() => { saveEmojiChannels.textContent = '채널별 설정 저장'; }, 1200);
+    } catch {
+      saveEmojiChannels.textContent = '저장 실패';
+      setTimeout(() => { saveEmojiChannels.textContent = '채널별 설정 저장'; }, 1200);
+    }
+    return;
+  }
+
   const logoutButton = event.target.closest('[data-dashboard-patch-action="logout"]');
   if (logoutButton) {
     event.preventDefault();
@@ -320,11 +407,8 @@ document.addEventListener('click', async (event) => {
     const status = await fetchHeartStatus(botKey, true);
     syncHeartBadge();
     syncLockedMenuMarks();
-    if (status?.verified) {
-      openPremiumTabByName(pendingPremiumTab || lockedTab || 'settings');
-    } else {
-      showHeartLock(botKey, status, pendingPremiumTab || lockedTab || 'settings');
-    }
+    if (status?.verified) openPremiumTabByName(pendingPremiumTab || lockedTab || 'settings');
+    else showHeartLock(botKey, status, pendingPremiumTab || lockedTab || 'settings');
     return;
   }
 
@@ -354,7 +438,14 @@ document.addEventListener('click', async (event) => {
 }, true);
 
 document.addEventListener('change', (event) => {
-  if (event.target?.id === 'botSelect') window.setTimeout(() => queueSyncHeartLock(true), 0);
+  if (event.target?.id === 'botSelect') window.setTimeout(() => {
+    emojiChannelCache.clear();
+    queueSyncHeartLock(true);
+  }, 0);
+  if (event.target?.id === 'guildSelect') window.setTimeout(() => {
+    emojiChannelCache.clear();
+    queueSyncHeartLock(true);
+  }, 0);
 }, true);
 
 injectPatchStyle();
