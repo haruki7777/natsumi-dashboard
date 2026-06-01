@@ -128,14 +128,21 @@ function injectPatchStyle() {
     .heart-status-badge.locked { color: #8b5a00; }
     .menu-tile[data-heart-locked="1"]::after { content: ' 🔒'; opacity: .8; }
     .emoji-channel-panel { margin-top: 18px; }
+    .emoji-channel-tools {
+      display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; gap: 10px; align-items: end; margin-top: 12px;
+    }
     .emoji-channel-list { display: grid; gap: 10px; margin-top: 12px; }
     .emoji-channel-row {
       display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px;
       padding: 12px 14px; border-radius: 16px; background: rgba(255,255,255,.45);
       border: 1px solid rgba(255,255,255,.35);
     }
+    .emoji-channel-row.off { background: rgba(255, 110, 150, .16); border-color: rgba(255, 80, 130, .35); }
     .emoji-channel-row b { display:block; }
     .emoji-channel-row small { opacity:.72; }
+    .emoji-channel-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .emoji-channel-state { font-size: 12px; font-weight: 800; opacity: .8; }
+    @media (max-width: 720px) { .emoji-channel-tools { grid-template-columns: 1fr; } }
   `;
   document.head.appendChild(style);
 }
@@ -303,15 +310,16 @@ async function logout() {
   window.location.href = window.location.pathname;
 }
 
-async function loadEmojiChannelSettings(guildId = selectedGuildId()) {
+async function loadEmojiChannelSettings(guildId = selectedGuildId(), force = false) {
   const key = `${currentBotKey()}:${guildId}`;
-  if (emojiChannelCache.has(key)) return emojiChannelCache.get(key);
+  if (!force && emojiChannelCache.has(key)) return emojiChannelCache.get(key);
   try {
-    const res = await originalFetch(apiUrl(`/api/dashboard/guilds/${guildId}/emoji-upscale/channels`), { credentials: 'include' });
+    const res = await originalFetch(`${apiUrl(`/api/dashboard/guilds/${guildId}/emoji-upscale/channels`)}&refresh=${Date.now()}`, { credentials: 'include' });
     const data = res.ok ? await res.json() : { channels: [] };
-    emojiChannelCache.set(key, data.channels || []);
+    const payload = { ...data, channels: data.channels || [] };
+    emojiChannelCache.set(key, payload);
   } catch {
-    emojiChannelCache.set(key, []);
+    emojiChannelCache.set(key, { channels: [] });
   }
   return emojiChannelCache.get(key);
 }
@@ -327,53 +335,128 @@ function channelRowsFromDom() {
 async function saveEmojiChannelSettings() {
   const guildId = selectedGuildId();
   const rows = channelRowsFromDom();
+  const globalEnabled = document.querySelector('#emojiEnabled')?.checked === true;
+  const webhookName = document.querySelector('#emojiWebhookName')?.value?.trim() || 'Natsumi Emoji Upscaler';
   const res = await originalFetch(apiUrl(`/api/dashboard/guilds/${guildId}/emoji-upscale/channels`), {
     method: 'PATCH',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ replace: true, channels: rows }),
+    body: JSON.stringify({ replace: true, globalEnabled, webhookName, channels: rows }),
   });
   if (!res.ok) throw new Error(`API ${res.status}`);
   const data = await res.json();
-  emojiChannelCache.set(`${currentBotKey()}:${guildId}`, data.channels || rows);
+  emojiChannelCache.set(`${currentBotKey()}:${guildId}`, { ...data, channels: data.channels || rows });
+}
+
+function allTextChannelsFromDom() {
+  const options = [...document.querySelectorAll('#emojiChannel option, #noticeChannel option, #ttsText option, #moderationLogChannel option')];
+  const seen = new Set();
+  return options
+    .map((option) => ({ id: option.value, name: option.textContent.replace(/^#\s*/, '').trim() }))
+    .filter((channel) => /^\d{15,25}$/.test(channel.id) && !seen.has(channel.id) && seen.add(channel.id));
+}
+
+function refreshEmojiChannelVisualState() {
+  document.querySelectorAll('#emojiChannelSettings [data-channel-id]').forEach((row) => {
+    const checkbox = row.querySelector('input[type="checkbox"]');
+    const state = row.querySelector('.emoji-channel-state');
+    const on = checkbox?.checked !== false;
+    row.classList.toggle('off', !on);
+    if (state) state.textContent = on ? 'ON' : 'OFF';
+  });
+}
+
+function addEmojiDisabledChannel(channelId) {
+  const row = document.querySelector(`#emojiChannelSettings [data-channel-id="${CSS.escape(channelId)}"]`);
+  if (!row) return false;
+  const checkbox = row.querySelector('input[type="checkbox"]');
+  if (checkbox) checkbox.checked = false;
+  refreshEmojiChannelVisualState();
+  row.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  return true;
+}
+
+function setAllEmojiChannels(enabled) {
+  document.querySelectorAll('#emojiChannelSettings [data-channel-id] input[type="checkbox"]').forEach((checkbox) => {
+    checkbox.checked = enabled;
+  });
+  refreshEmojiChannelVisualState();
 }
 
 async function injectEmojiChannelPanel() {
   if (currentActiveTab() !== 'emoji') return;
   const panel = document.querySelector('#panel');
   if (!panel || panel.querySelector('#emojiChannelSettings')) return;
-  const textChannels = [...document.querySelectorAll('#emojiChannel option')]
-    .map((option) => ({ id: option.value, name: option.textContent.replace(/^#\s*/, '') }))
-    .filter((channel) => /^\d{15,25}$/.test(channel.id));
-  const settings = await loadEmojiChannelSettings();
+  const textChannels = allTextChannelsFromDom();
+  const data = await loadEmojiChannelSettings(selectedGuildId(), true);
+  const settings = data.channels || [];
   const map = new Map(settings.map((row) => [row.channelId, row]));
   const html = `
     <section class="tool-card emoji-channel-panel" id="emojiChannelSettings">
       <div class="split-head">
         <div>
           <h4>채널별 이모지 업스케일</h4>
-          <p>전체 업스케일이 켜져 있어도, 꺼둔 채널에서는 이모지 확대가 반응하지 않아요.</p>
+          <p>원하는 채팅 채널을 골라 OFF 목록에 추가할 수 있어요. 저장하면 봇이 MongoDB 설정을 바로 읽어요.</p>
         </div>
-        <button class="soft-btn" data-dashboard-patch-action="save-emoji-channels" type="button">채널별 설정 저장</button>
+        <button class="soft-btn" data-dashboard-patch-action="refresh-emoji-channels" type="button">새로고침</button>
+      </div>
+      <div class="emoji-channel-tools">
+        <label>꺼놓을 채팅 채널 선택
+          <select id="emojiDisablePicker">
+            <option value="">채널 선택</option>
+            ${textChannels.map((channel) => `<option value="${esc(channel.id)}"># ${esc(channel.name)}</option>`).join('')}
+          </select>
+        </label>
+        <button class="soft-btn" data-dashboard-patch-action="add-disabled-emoji-channel" type="button">선택 채널 끄기</button>
+        <button class="soft-btn" data-dashboard-patch-action="enable-all-emoji-channels" type="button">전체 채널 켜기</button>
       </div>
       <div class="emoji-channel-list">
         ${textChannels.map((channel) => {
           const row = map.get(channel.id);
           const checked = row?.enabled !== false;
           return `
-            <label class="emoji-channel-row" data-channel-id="${esc(channel.id)}">
+            <label class="emoji-channel-row ${checked ? '' : 'off'}" data-channel-id="${esc(channel.id)}">
               <span><b># ${esc(channel.name)}</b><small>${esc(channel.id)}</small></span>
-              <input type="checkbox" ${checked ? 'checked' : ''}>
+              <span class="emoji-channel-actions"><span class="emoji-channel-state">${checked ? 'ON' : 'OFF'}</span><input type="checkbox" ${checked ? 'checked' : ''}></span>
             </label>
           `;
         }).join('') || '<p>표시할 텍스트 채널이 없어요.</p>'}
       </div>
+      <div class="form-actions"><button class="primary-btn" data-dashboard-patch-action="save-emoji-channels" type="button">채널별 설정 저장</button></div>
     </section>
   `;
   panel.insertAdjacentHTML('beforeend', html);
+  refreshEmojiChannelVisualState();
 }
 
 document.addEventListener('click', async (event) => {
+  const addDisabled = event.target.closest('[data-dashboard-patch-action="add-disabled-emoji-channel"]');
+  if (addDisabled) {
+    event.preventDefault();
+    event.stopPropagation();
+    const picker = document.querySelector('#emojiDisablePicker');
+    if (picker?.value) addEmojiDisabledChannel(picker.value);
+    return;
+  }
+
+  const enableAll = event.target.closest('[data-dashboard-patch-action="enable-all-emoji-channels"]');
+  if (enableAll) {
+    event.preventDefault();
+    event.stopPropagation();
+    setAllEmojiChannels(true);
+    return;
+  }
+
+  const refreshEmoji = event.target.closest('[data-dashboard-patch-action="refresh-emoji-channels"]');
+  if (refreshEmoji) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.querySelector('#emojiChannelSettings')?.remove();
+    emojiChannelCache.delete(`${currentBotKey()}:${selectedGuildId()}`);
+    await injectEmojiChannelPanel();
+    return;
+  }
+
   const saveEmojiChannels = event.target.closest('[data-dashboard-patch-action="save-emoji-channels"]');
   if (saveEmojiChannels) {
     event.preventDefault();
@@ -438,6 +521,7 @@ document.addEventListener('click', async (event) => {
 }, true);
 
 document.addEventListener('change', (event) => {
+  if (event.target.closest?.('#emojiChannelSettings')) refreshEmojiChannelVisualState();
   if (event.target?.id === 'botSelect') window.setTimeout(() => {
     emojiChannelCache.clear();
     queueSyncHeartLock(true);
