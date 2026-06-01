@@ -9,6 +9,19 @@ const OWNER_USER_ID = cleanEnv(process.env.OWNER_USER_ID) || cleanEnv(process.en
 const DISCORD_ADMINISTRATOR = 0x8n;
 const DISCORD_MANAGE_GUILD = 0x20n;
 
+const DashboardSettings = mongoose.models.DashboardSettings || model('DashboardSettings', new Schema({
+  guildId: { type: String, required: true, unique: true, index: true },
+  bots: { type: Schema.Types.Mixed, default: {} },
+  disabledCommands: { type: [String], default: [] },
+  features: { type: Schema.Types.Mixed, default: {} },
+  welcome: { type: Schema.Types.Mixed, default: {} },
+  yuzuha: { type: Schema.Types.Mixed, default: {} },
+  notice: { type: Schema.Types.Mixed, default: {} },
+  tts: { type: Schema.Types.Mixed, default: {} },
+  emojiUpscale: { type: Schema.Types.Mixed, default: {} },
+  moderation: { type: Schema.Types.Mixed, default: {} },
+}, { timestamps: true }));
+
 const EmojiUpscaleChannelSetting = mongoose.models.EmojiUpscaleChannelSetting || model('EmojiUpscaleChannelSetting', new Schema({
   guildId: { type: String, required: true, index: true },
   channelId: { type: String, required: true, index: true },
@@ -72,13 +85,9 @@ const originalPatch = express.application.patch;
 express.application.get = function patchedGet(path, ...handlers) {
   if (path === '/api/heart-status') {
     return originalGet.call(this, path, async (req, res) => {
-      if (!req.session?.discordUser?.id) {
-        return res.status(401).json({ error: 'Discord login required.' });
-      }
-
+      if (!req.session?.discordUser?.id) return res.status(401).json({ error: 'Discord login required.' });
       const botKey = normalizeBotKey(req.query?.bot || req.body?.bot || 'natsumi');
       const config = configFor(botKey);
-
       res.setHeader('Cache-Control', 'no-store');
       return res.json({
         verified: true,
@@ -87,21 +96,26 @@ express.application.get = function patchedGet(path, ...handlers) {
         botId: config.botId,
         source: 'external_gate_open_dashboard',
         expiresAt: null,
-        debug: {
-          dashboardOpen: true,
-          reason: 'Heart validation is handled before dashboard entry by web shop or dashboard command.',
-        },
+        debug: { dashboardOpen: true, reason: 'Heart validation is handled before dashboard entry by web shop or dashboard command.' },
       });
     });
   }
 
   if (path === '/api/dashboard/guilds/:guildId/emoji-upscale/channels') {
     return originalGet.call(this, path, requireGuildAdminLocal, async (req, res) => {
-      const rows = await EmojiUpscaleChannelSetting.find({ guildId: req.params.guildId }).lean().catch(() => []);
+      const guildId = req.params.guildId;
+      const rows = await EmojiUpscaleChannelSetting.find({ guildId }).lean().catch(() => []);
+      const settings = await DashboardSettings.findOne({ guildId }).lean().catch(() => null);
+      const botKey = normalizeBotKey(req.query?.bot || req.body?.bot || 'natsumi');
+      const scoped = settings?.bots?.[botKey];
+      const base = botKey === 'natsumi' ? settings : scoped;
+      const globalEnabled = Boolean(base?.features?.emojiUpscale || base?.emojiUpscale?.enabled || settings?.features?.emojiUpscale || settings?.emojiUpscale?.enabled);
       res.setHeader('Cache-Control', 'no-store');
       return res.json({
         ok: true,
-        guildId: req.params.guildId,
+        guildId,
+        globalEnabled,
+        webhookName: base?.emojiUpscale?.webhookName || settings?.emojiUpscale?.webhookName || 'Natsumi Emoji Upscaler',
         channels: rows.map((row) => ({
           channelId: row.channelId,
           enabled: row.enabled !== false,
@@ -120,12 +134,15 @@ express.application.patch = function patchedPatch(path, ...handlers) {
   if (path === '/api/dashboard/guilds/:guildId/emoji-upscale/channels') {
     return originalPatch.call(this, path, requireGuildAdminLocal, async (req, res) => {
       const guildId = req.params.guildId;
+      const botKey = normalizeBotKey(req.query?.bot || req.body?.bot || 'natsumi');
       const channels = Array.isArray(req.body?.channels) ? req.body.channels : [];
+      const globalEnabled = req.body?.globalEnabled === undefined ? undefined : req.body.globalEnabled === true;
+      const webhookName = String(req.body?.webhookName || 'Natsumi Emoji Upscaler').trim().slice(0, 80) || 'Natsumi Emoji Upscaler';
       const safeRows = channels
         .map((row) => ({
           channelId: String(row.channelId || '').trim(),
           enabled: row.enabled !== false,
-          webhookName: String(row.webhookName || 'Natsumi Emoji Upscaler').trim().slice(0, 80),
+          webhookName: String(row.webhookName || webhookName).trim().slice(0, 80) || webhookName,
         }))
         .filter((row) => /^\d{15,25}$/.test(row.channelId));
 
@@ -135,13 +152,33 @@ express.application.patch = function patchedPatch(path, ...handlers) {
         { upsert: true, new: true, setDefaultsOnInsert: true },
       )));
 
-      const keepIds = safeRows.map((row) => row.channelId);
       if (req.body?.replace === true) {
-        await EmojiUpscaleChannelSetting.deleteMany({ guildId, channelId: { $nin: keepIds } }).catch(() => {});
+        await EmojiUpscaleChannelSetting.deleteMany({ guildId, channelId: { $nin: safeRows.map((row) => row.channelId) } }).catch(() => {});
       }
 
-      const rows = await EmojiUpscaleChannelSetting.find({ guildId }).lean().catch(() => []);
-      return res.json({ ok: true, guildId, channels: rows });
+      if (globalEnabled !== undefined) {
+        const set = {
+          'features.emojiUpscale': globalEnabled,
+          'emojiUpscale.enabled': globalEnabled,
+          'emojiUpscale.webhookName': webhookName,
+          [`bots.${botKey}.features.emojiUpscale`]: globalEnabled,
+          [`bots.${botKey}.emojiUpscale.enabled`]: globalEnabled,
+          [`bots.${botKey}.emojiUpscale.webhookName`]: webhookName,
+        };
+        await DashboardSettings.findOneAndUpdate({ guildId }, { $set: { guildId, ...set } }, { upsert: true, new: true }).catch(() => null);
+      }
+
+      const [rows, settings] = await Promise.all([
+        EmojiUpscaleChannelSetting.find({ guildId }).lean().catch(() => []),
+        DashboardSettings.findOne({ guildId }).lean().catch(() => null),
+      ]);
+      const base = botKey === 'natsumi' ? settings : settings?.bots?.[botKey];
+      return res.json({
+        ok: true,
+        guildId,
+        globalEnabled: Boolean(base?.features?.emojiUpscale || base?.emojiUpscale?.enabled || settings?.features?.emojiUpscale || settings?.emojiUpscale?.enabled),
+        channels: rows,
+      });
     });
   }
 
