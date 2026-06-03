@@ -134,6 +134,12 @@ const defaultSettings = {
     timeoutMinutes: 10,
     kickThreshold: 5,
     logChannelId: '',
+    securityLogChannelId: '',
+    forbiddenAuditChannelId: '',
+    levelLogChannelId: '',
+    quarantineChannelId: '',
+    quarantineRoleId: '',
+    quarantineEnabled: false,
     extraBadWords: [],
     whitelist: { users: [], roles: [], channels: [] },
     antiRaid: {
@@ -583,6 +589,7 @@ function renderModeration() {
       ${toggleCard({ id: 'deleteBadWord', label: '감지 메시지 삭제', description: '감지된 메시지를 바로 지워요.', checked: moderation.deleteMessage !== false })}
       ${toggleCard({ id: 'warnBadWord', label: '감지 시 경고 추가', description: '감지된 유저에게 경고 1회를 추가해요.', checked: moderation.warnOnBadWord !== false })}
       ${toggleCard({ id: 'antiRaidEnabled', label: '테러방지 켜기', description: '대량 생성/삭제/추방/차단을 감지해요.', checked: Boolean(antiRaid.enabled) })}
+      ${toggleCard({ id: 'quarantineEnabled', label: '격리 운영', description: '대응 방식이 quarantine일 때 격리 역할을 부여해요.', checked: Boolean(moderation.quarantineEnabled) })}
       ${toggleCard({ id: 'suspiciousBotDetect', label: '봇 추가 감지', description: '의심스러운 봇 추가를 기록해요.', checked: antiRaid.suspiciousBotDetect !== false })}
     </div>
     <div class="form-grid">
@@ -590,7 +597,12 @@ function renderModeration() {
       <label>링크 허용 레벨<input id="linkAllowLevel" type="number" min="1" max="100000" value="${Number(moderation.linkAllowLevel || 10)}" /></label>
       <label>자동관리 통과 레벨<input id="levelAllowMinimum" type="number" min="1" max="100000" value="${Number(moderation.levelAllowMinimum || 20)}" /></label>
       <label>자동관리 로그 채널<select id="moderationLogChannel">${optionList('text', moderation.logChannelId, '자동 생성 또는 채널 선택')}</select></label>
-      <label>대응 방식<select id="antiRaidAction">${[['log', '로그만 남기기'], ['timeout', '타임아웃'], ['kick', '추방'], ['ban', '차단']].map(([value, label]) => `<option value="${value}" ${antiRaid.action === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
+      <label>보안로그 채널<select id="securityLogChannel">${optionList('text', moderation.securityLogChannelId, '보안로그 채널 선택')}</select></label>
+      <label>금지어감사 채널<select id="forbiddenAuditChannel">${optionList('text', moderation.forbiddenAuditChannelId, '금지어감사 채널 선택')}</select></label>
+      <label>채팅레벨로그 채널<select id="levelLogChannel">${optionList('text', moderation.levelLogChannelId, '채팅레벨로그 채널 선택')}</select></label>
+      <label>격리운영 채널<select id="quarantineChannel">${optionList('text', moderation.quarantineChannelId, '격리운영 채널 선택')}</select></label>
+      <label>격리 역할 ID<input id="quarantineRoleId" value="${esc(moderation.quarantineRoleId || '')}" placeholder="role id" /></label>
+      <label>대응 방식<select id="antiRaidAction">${[['log', '로그만 남기기'], ['timeout', '타임아웃'], ['kick', '추방'], ['ban', '차단'], ['quarantine', '격리']].map(([value, label]) => `<option value="${value}" ${antiRaid.action === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
       <label>타임아웃 기준 경고 횟수<input id="timeoutThreshold" type="number" min="0" max="100" value="${Number(moderation.timeoutThreshold || 0)}" /></label>
       <label>타임아웃 시간(분)<input id="timeoutMinutes" type="number" min="1" max="40320" value="${Number(moderation.timeoutMinutes || 10)}" /></label>
       <label>추방 기준 경고 횟수<input id="kickThreshold" type="number" min="0" max="100" value="${Number(moderation.kickThreshold || 0)}" /></label>
@@ -840,6 +852,12 @@ function collectSettingsFromDom() {
       deleteMessage: document.querySelector('#deleteBadWord')?.checked !== false,
       warnOnBadWord: document.querySelector('#warnBadWord')?.checked !== false,
       logChannelId: formValue('#moderationLogChannel'),
+      securityLogChannelId: formValue('#securityLogChannel'),
+      forbiddenAuditChannelId: formValue('#forbiddenAuditChannel'),
+      levelLogChannelId: formValue('#levelLogChannel'),
+      quarantineChannelId: formValue('#quarantineChannel'),
+      quarantineRoleId: formValue('#quarantineRoleId'),
+      quarantineEnabled: document.querySelector('#quarantineEnabled')?.checked || false,
       timeoutThreshold: Number(formValue('#timeoutThreshold') || 0),
       timeoutMinutes: Number(formValue('#timeoutMinutes') || 10),
       kickThreshold: Number(formValue('#kickThreshold') || 0),
