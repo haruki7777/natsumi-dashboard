@@ -122,7 +122,12 @@ const defaultSettings = {
   emojiUpscale: { enabled: false, channelId: '', webhookName: 'Yuzuha Emoji Upscaler' },
   moderation: {
     enabled: false,
+    aiSafetyEnabled: false,
     badWordDetect: false,
+    linkMode: 'allow',
+    linkAllowLevel: 10,
+    levelAllowEnabled: false,
+    levelAllowMinimum: 20,
     deleteMessage: true,
     warnOnBadWord: true,
     timeoutThreshold: 3,
@@ -571,6 +576,8 @@ function renderModeration() {
   return `
     <section class="section-title"><h3>자동관리</h3><p>켜기 전까지는 자동 처벌이 작동하지 않아요. 처음에는 로그만 남기기로 테스트하는 걸 추천해요.</p></section>
     <div class="toggle-grid">
+      ${toggleCard({ id: 'aiSafetyEnabled', label: 'AI 자동검열', description: 'AI 채팅을 부를 때만 안전검열해요. 꺼두면 자동으로 잡지 않아요.', checked: Boolean(moderation.aiSafetyEnabled) })}
+      ${toggleCard({ id: 'levelAllowEnabled', label: '레벨 기반 허용', description: '지정 레벨 이상은 자동관리 감지에서 통과시켜요.', checked: Boolean(moderation.levelAllowEnabled) })}
       ${toggleCard({ id: 'moderationEnabled', label: '자동관리 켜기', description: '금지어와 자동 로그를 사용할 수 있어요.', checked: Boolean(moderation.enabled) })}
       ${toggleCard({ id: 'badWordDetect', label: '욕설/금지어 감지', description: '설정한 금지어를 감지해요.', checked: Boolean(moderation.badWordDetect) })}
       ${toggleCard({ id: 'deleteBadWord', label: '감지 메시지 삭제', description: '감지된 메시지를 바로 지워요.', checked: moderation.deleteMessage !== false })}
@@ -579,6 +586,9 @@ function renderModeration() {
       ${toggleCard({ id: 'suspiciousBotDetect', label: '봇 추가 감지', description: '의심스러운 봇 추가를 기록해요.', checked: antiRaid.suspiciousBotDetect !== false })}
     </div>
     <div class="form-grid">
+      <label>링크 허용 모드<select id="linkMode">${[['allow', '모두 허용'], ['block', '모두 차단'], ['level', '레벨 이상 허용']].map(([value, label]) => '<option value="' + value + '" ' + (String(moderation.linkMode || 'allow') === value ? 'selected' : '') + '>' + label + '</option>').join('')}</select></label>
+      <label>링크 허용 레벨<input id="linkAllowLevel" type="number" min="1" max="100000" value="${Number(moderation.linkAllowLevel || 10)}" /></label>
+      <label>자동관리 통과 레벨<input id="levelAllowMinimum" type="number" min="1" max="100000" value="${Number(moderation.levelAllowMinimum || 20)}" /></label>
       <label>자동관리 로그 채널<select id="moderationLogChannel">${optionList('text', moderation.logChannelId, '자동 생성 또는 채널 선택')}</select></label>
       <label>대응 방식<select id="antiRaidAction">${[['log', '로그만 남기기'], ['timeout', '타임아웃'], ['kick', '추방'], ['ban', '차단']].map(([value, label]) => `<option value="${value}" ${antiRaid.action === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
       <label>타임아웃 기준 경고 횟수<input id="timeoutThreshold" type="number" min="0" max="100" value="${Number(moderation.timeoutThreshold || 0)}" /></label>
@@ -821,7 +831,12 @@ function collectSettingsFromDom() {
     next.moderation = {
       ...next.moderation,
       enabled: document.querySelector('#moderationEnabled')?.checked || false,
+      aiSafetyEnabled: document.querySelector('#aiSafetyEnabled')?.checked || false,
       badWordDetect: document.querySelector('#badWordDetect')?.checked || false,
+      linkMode: formValue('#linkMode') || 'allow',
+      linkAllowLevel: Number(formValue('#linkAllowLevel') || 10),
+      levelAllowEnabled: document.querySelector('#levelAllowEnabled')?.checked || false,
+      levelAllowMinimum: Number(formValue('#levelAllowMinimum') || 20),
       deleteMessage: document.querySelector('#deleteBadWord')?.checked !== false,
       warnOnBadWord: document.querySelector('#warnBadWord')?.checked !== false,
       logChannelId: formValue('#moderationLogChannel'),
