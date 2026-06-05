@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 
-const PORT = Number(process.env.SERVER_PORT || process.env.PORT || 3000);
+const PORT = Number(process.env.SERVER_PORT || process.env.PORT || process.env.WEB_PORT || 25901);
 const DASHBOARD_URL = (process.env.DASHBOARD_URL || 'https://natsumidashboard.kro.kr/').replace(/\/$/, '') + '/';
 const SITE_URL = (process.env.SITE_URL || 'https://natsumi-site.kro.kr/').replace(/\/$/, '') + '/';
 const GAME_URL = (process.env.GAME_URL || 'https://natsumi-game.kro.kr/').replace(/\/$/, '') + '/';
