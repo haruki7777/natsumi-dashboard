@@ -52,7 +52,7 @@ const DISCORD_SPEAK = 0x200000n;
 const distDir = path.join(__dirname, 'dist');
 mongoose.set('bufferCommands', false);
 
-const DashboardSettings = model('DashboardSettings', new Schema({
+const DashboardSettings = mongoose.models.DashboardSettings || model('DashboardSettings', new Schema({
   guildId: { type: String, required: true, unique: true, index: true },
   bots: { type: Schema.Types.Mixed, default: {} },
   disabledCommands: { type: [String], default: [] },
@@ -103,7 +103,7 @@ function settingsForBot(doc, botKey) {
   return {};
 }
 
-const DashboardNotice = model('DashboardNotice', new Schema({
+const DashboardNotice = mongoose.models.DashboardNotice || model('DashboardNotice', new Schema({
   guildId: String,
   channelId: String,
   message: String,
@@ -113,7 +113,7 @@ const DashboardNotice = model('DashboardNotice', new Schema({
   createdAt: { type: Date, default: Date.now },
 }));
 
-const DashboardQuestion = model('DashboardQuestion', new Schema({
+const DashboardQuestion = mongoose.models.DashboardQuestion || model('DashboardQuestion', new Schema({
   guildId: String,
   userId: String,
   username: String,
@@ -123,14 +123,14 @@ const DashboardQuestion = model('DashboardQuestion', new Schema({
   answeredAt: Date,
 }));
 
-const NatsumiAnonIdentity = model('NatsumiAnonIdentity', new Schema({
+const NatsumiAnonIdentity = mongoose.models.NatsumiAnonIdentity || model('NatsumiAnonIdentity', new Schema({
   guildId: { type: String, required: true, index: true },
   userId: { type: String, required: true, index: true },
   anonIp: { type: String, required: true, index: true },
   updatedAt: Date,
 }, { timestamps: true }));
 
-const DeveloperAnnouncement = model('DeveloperAnnouncement', new Schema({
+const DeveloperAnnouncement = mongoose.models.DeveloperAnnouncement || model('DeveloperAnnouncement', new Schema({
   authorId: String,
   authorName: String,
   title: String,
