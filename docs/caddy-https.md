@@ -1,24 +1,53 @@
-# Caddy HTTPS reverse proxy
+# Caddy 자동 TLS HTTPS 설정
 
-Use this when the dashboard and game center are already running on exposed HTTP ports and one public server can receive ports 80 and 443.
+대시보드와 게임센터는 Caddy가 HTTPS를 맡고, 앱은 기존 HTTP 포트로만 실행한다. 인증서 파일을 직접 만들거나 서버에 수동 설치하지 않는다. Caddy가 Let's Encrypt 인증서를 자동 발급하고 갱신한다.
 
-1. Point DNS A records to the Caddy server IP.
+## 연결 구조
+
+- `https://natsumidashboard.kro.kr` -> `127.0.0.1:25901`
+- `https://api.natsumidashboard.kro.kr` -> `127.0.0.1:25901`
+- `https://natsumi-game.kro.kr` -> `127.0.0.1:25772`
+- `https://api.natsumi-game.kro.kr` -> `127.0.0.1:25772`
+
+## 서버 작업 순서
+
+1. DNS A 레코드를 Caddy가 설치될 서버 IP로 맞춘다.
    - `natsumidashboard.kro.kr`
    - `api.natsumidashboard.kro.kr`
    - `natsumi-game.kro.kr`
    - `api.natsumi-game.kro.kr`
-2. Install Caddy on the public server.
-3. Copy `deploy/Caddyfile` to Caddy's config path.
-4. Reload Caddy.
+2. 서버 방화벽과 호스팅 패널에서 `80`, `443` 포트를 연다.
+3. Caddy를 설치한다.
+4. `deploy/Caddyfile` 내용을 서버의 `/etc/caddy/Caddyfile`에 적용한다.
+5. 문법을 확인한다.
 
-Discord Developer Portal redirect URIs:
+```bash
+sudo caddy validate --config /etc/caddy/Caddyfile
+```
+
+6. Caddy를 다시 불러온다.
+
+```bash
+sudo systemctl reload caddy
+```
+
+7. HTTPS 응답을 확인한다.
+
+```bash
+curl -I https://natsumidashboard.kro.kr
+curl -I https://natsumi-game.kro.kr
+```
+
+## Discord Developer Portal 리디렉션
+
+아래 URI 4개를 정확히 등록한다.
 
 - `https://natsumidashboard.kro.kr/auth/discord/callback`
 - `https://natsumidashboard.kro.kr/auth/discord/dashboard/callback`
 - `https://natsumi-game.kro.kr/auth/discord/callback`
 - `https://natsumi-game.kro.kr/auth/discord/game/callback`
 
-The apps must use these environment values:
+## 환경변수 기준
 
 ```env
 DASHBOARD_URL=https://natsumidashboard.kro.kr/
@@ -28,4 +57,15 @@ PUBLIC_BASE_URL=https://natsumidashboard.kro.kr
 ALLOWED_ORIGINS=https://natsumidashboard.kro.kr,https://natsumi-game.kro.kr,https://natsumi-site.kro.kr
 ```
 
-Do not enable app-level `FORCE_HTTPS=true` until Caddy is actually serving a valid certificate on ports 80 and 443. Caddy should be the layer that redirects HTTP to HTTPS.
+게임센터 서버는 별도로 아래 값도 맞춘다.
+
+```env
+PUBLIC_BASE_URL=https://natsumi-game.kro.kr
+DISCORD_REDIRECT_URI=https://natsumi-game.kro.kr/auth/discord/callback
+```
+
+## 주의
+
+- 앱 내부 `FORCE_HTTPS=true`는 Caddy HTTPS 접속이 실제로 성공한 뒤에만 켠다.
+- Caddy가 HTTP -> HTTPS 리디렉션을 담당해야 OAuth 리디렉션과 세션이 덜 꼬인다.
+- 80/443 포트를 받을 수 없는 서버라면 Caddy 자동 TLS 대신 Cloudflare Tunnel로 전환한다.
