@@ -10,9 +10,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 const PORT = Number(process.env.SERVER_PORT || process.env.PORT || process.env.WEB_PORT || 25901);
-const DASHBOARD_URL = (process.env.DASHBOARD_URL || 'https://natsumidashboard.kro.kr/').replace(/\/$/, '') + '/';
+const DASHBOARD_URL = (process.env.DASHBOARD_URL || 'http://natsumidashboard.kro.kr/').replace(/\/$/, '') + '/';
 const SITE_URL = (process.env.SITE_URL || 'https://natsumi-site.kro.kr/').replace(/\/$/, '') + '/';
-const GAME_URL = (process.env.GAME_URL || 'https://natsumi-game.kro.kr/').replace(/\/$/, '') + '/';
+const GAME_URL = (process.env.GAME_URL || 'http://natsumi-game.kro.kr/').replace(/\/$/, '') + '/';
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 const NATSUMI_BOT_TOKEN = process.env.NATSUMI_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN || process.env.TOKEN || '';
@@ -51,6 +51,54 @@ const DISCORD_CONNECT = 0x100000n;
 const DISCORD_SPEAK = 0x200000n;
 const distDir = path.join(__dirname, 'dist');
 mongoose.set('bufferCommands', false);
+app.disable('x-powered-by');
+
+const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000);
+const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 180);
+const AUTH_RATE_LIMIT_MAX = Number(process.env.AUTH_RATE_LIMIT_MAX || 35);
+const rateBuckets = new Map();
+
+function clientIp(req) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwarded || req.socket.remoteAddress || 'unknown';
+}
+
+function rateLimit(maxRequests = RATE_LIMIT_MAX) {
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = `${clientIp(req)}:${req.path.startsWith('/auth') ? 'auth' : 'site'}`;
+    const bucket = rateBuckets.get(key);
+    if (!bucket || now - bucket.startedAt > RATE_LIMIT_WINDOW_MS) {
+      rateBuckets.set(key, { startedAt: now, count: 1 });
+      return next();
+    }
+    bucket.count += 1;
+    if (bucket.count > maxRequests) {
+      res.setHeader('Retry-After', String(Math.ceil((RATE_LIMIT_WINDOW_MS - (now - bucket.startedAt)) / 1000)));
+      return res.status(429).json({ error: 'Too many requests. Please slow down.' });
+    }
+    return next();
+  };
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of rateBuckets.entries()) {
+    if (now - bucket.startedAt > RATE_LIMIT_WINDOW_MS * 2) rateBuckets.delete(key);
+  }
+}, RATE_LIMIT_WINDOW_MS).unref?.();
+
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+  next();
+});
+app.use(rateLimit());
+app.use('/auth', rateLimit(AUTH_RATE_LIMIT_MAX));
+app.use('/api', rateLimit(Number(process.env.API_RATE_LIMIT_MAX || RATE_LIMIT_MAX)));
 
 const DashboardSettings = mongoose.models.DashboardSettings || model('DashboardSettings', new Schema({
   guildId: { type: String, required: true, unique: true, index: true },
