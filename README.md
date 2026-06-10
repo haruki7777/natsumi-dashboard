@@ -26,7 +26,7 @@ npm run build
 
 ## API 연동
 
-기본 API 주소는 `https://natsumi-site.kro.kr`입니다.
+기본 API 주소는 `http://natsumi-site.kro.kr`입니다.
 
 다른 주소를 쓰려면 `.env`에 아래 값을 설정합니다.
 

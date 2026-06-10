@@ -73,7 +73,7 @@ sudo systemctl reload caddy
 Open:
 
 ```txt
-https://natsumidashboard.kro.kr
+http://natsumidashboard.kro.kr
 ```
 
 If it does not work, check:

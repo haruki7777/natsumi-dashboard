@@ -36,15 +36,15 @@ printed by the app logs.
 Use HTTPS URLs only:
 
 ```text
-https://natsumidashboard.kro.kr/auth/discord/callback
-https://natsumidashboard.kro.kr/auth/discord/dashboard/callback
+http://natsumidashboard.kro.kr/auth/discord/callback
+http://natsumidashboard.kro.kr/auth/discord/dashboard/callback
 ```
 
 ## Health check
 
 ```bash
-curl -I https://natsumidashboard.kro.kr
-curl -L https://natsumidashboard.kro.kr | head
+curl -I http://natsumidashboard.kro.kr
+curl -L http://natsumidashboard.kro.kr | head
 ```
 
 The response must be the dashboard HTML, not the Vortexa Cloud panel.

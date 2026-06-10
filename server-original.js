@@ -11,7 +11,7 @@ const app = express();
 
 const PORT = Number(process.env.SERVER_PORT || process.env.PORT || process.env.WEB_PORT || 25901);
 const DASHBOARD_URL = (process.env.DASHBOARD_URL || 'http://natsumidashboard.kro.kr/').replace(/\/$/, '') + '/';
-const SITE_URL = (process.env.SITE_URL || 'https://natsumi-site.kro.kr/').replace(/\/$/, '') + '/';
+const SITE_URL = (process.env.SITE_URL || 'http://natsumi-site.kro.kr/').replace(/\/$/, '') + '/';
 const GAME_URL = (process.env.GAME_URL || 'http://natsumi-game.kro.kr/').replace(/\/$/, '') + '/';
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
