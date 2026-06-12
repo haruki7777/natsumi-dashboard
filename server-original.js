@@ -61,7 +61,56 @@ function hostingConfig(botKey = 'natsumi') {
   const apiBase = firstEnv(`${upper}_PRIMARY_API_BASE`, 'PRIMARY_HOSTING_API_BASE', 'PRIMARY_HOSTING_PANEL_URL', 'VORTEXA_PANEL_URL', 'PANEL_URL').replace(/\/$/, '');
   const apiKey = firstEnv(`${upper}_PRIMARY_API_KEY`, `${upper}_VORTEXA_API_KEY`, key === 'yuzuha' ? 'YUZUHA_PRIMARY_API_KEY' : 'NATSUMI_PRIMARY_API_KEY', 'PRIMARY_HOSTING_API_KEY', 'VORTEXA_API_KEY');
   const serverId = firstEnv(`${upper}_PRIMARY_SERVER_ID`, `${upper}_VORTEXA_SERVER_ID`, `${upper}_SERVER_ID`, key === 'yuzuha' ? 'YUZUHA_SERVER_ID' : 'NATSUMI_SERVER_ID', 'PRIMARY_HOSTING_SERVER_ID', key === 'natsumi' ? 'VORTEXA_SERVER_ID' : '');
-  return { apiBase, apiKey, serverId };
+  return { apiBase, apiKey, serverId, botKey: key };
+}
+
+const hostingServerCache = new Map();
+
+function coredLabExternalBase(apiBase = '') {
+  const base = String(apiBase || '').replace(/\/$/, '');
+  if (!base) return '';
+  if (base.endsWith('/api/external')) return base;
+  if (base.includes('host.coredlabgame.cloud')) return `${base}/api/external`;
+  return '';
+}
+
+async function discoverHostingServerId(config) {
+  if (!config.apiBase || !config.apiKey) return '';
+  if (config.serverId) return config.serverId;
+  const cacheKey = `${config.apiBase}:${config.botKey}`;
+  const cached = hostingServerCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.serverId;
+
+  const endpoints = ['/api/client', '/api/client/servers'];
+  const nameHints = config.botKey === 'yuzuha'
+    ? ['yuzuha', '유즈하']
+    : ['natsumi', '나츠미'];
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetchWithTimeout(`${config.apiBase}${endpoint}`, {
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          Accept: 'application/json',
+        },
+      }, 6500);
+      if (!response.ok) continue;
+      const json = await response.json();
+      const rows = Array.isArray(json?.data) ? json.data : [];
+      const matched = rows.find((row) => {
+        const attrs = row?.attributes || {};
+        const name = String(attrs.name || '').toLowerCase();
+        return nameHints.some((hint) => name.includes(hint.toLowerCase()));
+      }) || rows[0];
+      const id = matched?.attributes?.identifier || matched?.attributes?.uuid || '';
+      if (id) {
+        hostingServerCache.set(cacheKey, { serverId: id, expiresAt: Date.now() + 5 * 60 * 1000 });
+        return id;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return '';
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
@@ -97,11 +146,35 @@ async function fetchRuntimeStatusCandidates(botKey = 'natsumi') {
 
 async function fetchHostingResources(botKey = 'natsumi') {
   const config = hostingConfig(botKey);
-  if (!config.apiBase || !config.apiKey || !config.serverId) {
+  const coredLabBase = coredLabExternalBase(config.apiBase);
+  if (coredLabBase && config.apiKey) {
+    try {
+      const response = await fetchWithTimeout(`${coredLabBase}/server`, {
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          Accept: 'application/json',
+        },
+      }, 6500);
+      if (!response.ok) return { ok: false, configured: true, state: null, status: response.status };
+      const json = await response.json();
+      const server = json?.server || {};
+      return {
+        ok: Boolean(json?.success),
+        configured: true,
+        state: server.status || null,
+        memoryMb: null,
+        serverId: server.serverIdentifier || null,
+      };
+    } catch (error) {
+      return { ok: false, configured: true, state: null, error: error?.name || 'fetch_failed' };
+    }
+  }
+  const serverId = await discoverHostingServerId(config);
+  if (!config.apiBase || !config.apiKey || !serverId) {
     return { ok: false, configured: false, state: null, memoryMb: null };
   }
   try {
-    const response = await fetchWithTimeout(`${config.apiBase}/api/client/servers/${config.serverId}/resources`, {
+    const response = await fetchWithTimeout(`${config.apiBase}/api/client/servers/${serverId}/resources`, {
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
         Accept: 'application/json',
@@ -123,12 +196,30 @@ async function fetchHostingResources(botKey = 'natsumi') {
 
 async function sendHostingPowerSignal(botKey = 'natsumi', signal = 'restart') {
   const config = hostingConfig(botKey);
-  if (!config.apiBase || !config.apiKey || !config.serverId) {
+  const coredLabBase = coredLabExternalBase(config.apiBase);
+  const safeSignal = ['start', 'stop', 'restart', 'kill'].includes(signal) ? signal : 'restart';
+  if (coredLabBase && config.apiKey) {
+    try {
+      const response = await fetchWithTimeout(`${coredLabBase}/power`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ signal: safeSignal }),
+      }, 6500);
+      return { ok: response.ok || response.status === 204, configured: true, status: response.status, signal: safeSignal };
+    } catch (error) {
+      return { ok: false, configured: true, error: error?.name || 'fetch_failed', signal: safeSignal };
+    }
+  }
+  const serverId = await discoverHostingServerId(config);
+  if (!config.apiBase || !config.apiKey || !serverId) {
     return { ok: false, configured: false, error: 'hosting server id is not configured' };
   }
-  const safeSignal = ['start', 'stop', 'restart', 'kill'].includes(signal) ? signal : 'restart';
   try {
-    const response = await fetchWithTimeout(`${config.apiBase}/api/client/servers/${config.serverId}/power`, {
+    const response = await fetchWithTimeout(`${config.apiBase}/api/client/servers/${serverId}/power`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
