@@ -75,6 +75,8 @@ function normalizeHeartStatus(data = {}, fallbackBot = currentBotKey()) {
     botKey,
     verified: Boolean(data.verified),
     heartUrl: data.heartUrl || defaultHeartUrls[botKey],
+    needsLogin: data.error === 'login_required' || data.needsLogin === true,
+    message: data.message || '',
     checked: true,
   };
 }
@@ -84,7 +86,7 @@ window.fetch = async (input, init) => {
   if (!isHeartStatusRequest(input)) return response;
 
   const botKey = botKeyFromRequest(input);
-  const data = response.ok ? await response.clone().json().catch(() => ({})) : {};
+  const data = await response.clone().json().catch(() => ({}));
   heartCache[botKey] = normalizeHeartStatus(data, botKey);
 
   return new Response(JSON.stringify(heartCache[botKey]), {
@@ -103,7 +105,7 @@ async function fetchHeartStatus(botKey = currentBotKey(), force = false) {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
     });
-    const data = response.ok ? await response.json().catch(() => ({})) : {};
+    const data = await response.json().catch(() => ({}));
     heartCache[key] = normalizeHeartStatus(data, key);
   } catch {
     heartCache[key] = { ...heartCache[key], botKey: key, verified: false, checked: true };
@@ -126,7 +128,7 @@ function injectPatchStyle() {
     }
     .heart-status-badge.ok { color: #e7497d; }
     .heart-status-badge.locked { color: #8b5a00; }
-    .menu-tile[data-heart-locked="1"]::after { content: ' 🔒'; opacity: .8; }
+    .menu-tile[data-heart-locked="1"]::after { content: ' \\1F512'; opacity: .8; }
     .emoji-channel-panel { margin-top: 18px; }
     .emoji-channel-tools {
       display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; gap: 10px; align-items: end; margin-top: 12px;
@@ -179,15 +181,20 @@ function syncLockedMenuMarks() {
 }
 
 function renderHeartLock(botKey, status, tab = pendingPremiumTab || currentActiveTab()) {
-  const botName = botKey === 'yuzuha' ? '유즈하' : '나츠미';
+  const botName = botKey === 'yuzuha' ? '\uc720\uc988\ud558' : '\ub098\uce20\ubbf8';
   const safeTab = premiumTabs.has(tab) ? tab : 'settings';
+  const needsLogin = status?.needsLogin;
   return `
     <section class="tool-card heart-lock" data-pending-tab="${safeTab}">
-      <h3>${botName} 한디리 하트 인증이 필요해요</h3>
-      <p>${botName} 설정은 하트 인증 전에는 열 수 없어요. 아래 버튼으로 하트를 누른 뒤 다시 확인하면 방금 열려던 설정 메뉴가 자동으로 열려요.</p>
+      <h3>${needsLogin ? '\ub514\uc2a4\ucf54\ub4dc \ub85c\uadf8\uc778\uc774 \ud544\uc694\ud574\uc694' : `${botName} \ud55c\ub514\ub9ac \ud558\ud2b8 \uc778\uc99d\uc774 \ud544\uc694\ud574\uc694`}</h3>
+      <p>${needsLogin
+        ? '\ud558\ud2b8 \ud655\uc778\uc740 \ub514\uc2a4\ucf54\ub4dc \ub85c\uadf8\uc778 \ud6c4\uc5d0\ub9cc \uac00\ub2a5\ud574\uc694. \uba3c\uc800 \ub85c\uadf8\uc778\ud55c \ub4a4 \ub2e4\uc2dc \ud655\uc778\ud574\uc918.'
+        : `${botName} \uc124\uc815\uc740 \ud55c\ub514\ub9ac \ud558\ud2b8\ub97c \ub204\ub978 \ub4a4 \uc0ac\uc6a9\ud560 \uc218 \uc788\uc5b4\uc694. \ud558\ud2b8\ub97c \ub204\ub974\uace0 \ub2e4\uc2dc \ud655\uc778\ud558\uba74 \ubc29\uae08 \uc5f4\ub824\ub358 \uba54\ub274\uac00 \uc790\ub3d9\uc73c\ub85c \uc5f4\ub824\uc694.`}</p>
       <div class="form-actions">
-        <a class="primary-btn" href="${status.heartUrl || defaultHeartUrls[botKey]}" target="_blank" rel="noreferrer">${botName} 하트 누르기</a>
-        <button class="soft-btn" data-dashboard-patch-action="refresh-heart" type="button">하트 다시 확인</button>
+        ${needsLogin
+          ? '<a class="primary-btn" href="/auth/discord/dashboard">\ub514\uc2a4\ucf54\ub4dc \ub85c\uadf8\uc778</a>'
+          : `<a class="primary-btn" href="${status.heartUrl || defaultHeartUrls[botKey]}" target="_blank" rel="noreferrer">${botName} \ud558\ud2b8 \ub204\ub974\uae30</a>`}
+        <button class="soft-btn" data-dashboard-patch-action="refresh-heart" type="button">\ud558\ud2b8 \ub2e4\uc2dc \ud655\uc778</button>
       </div>
     </section>
   `;
@@ -216,7 +223,7 @@ function syncHeartBadge() {
     topActions.insertBefore(badge, loginPill);
   }
   badge.className = `heart-status-badge ${status?.verified ? 'ok' : 'locked'}`;
-  badge.textContent = `${botKey === 'yuzuha' ? '유즈하' : '나츠미'} 하트 ${status?.verified ? '인증됨' : '미인증'}`;
+  badge.textContent = `${botKey === 'yuzuha' ? '\uc720\uc988\ud558' : '\ub098\uce20\ubbf8'} \ud558\ud2b8 ${status?.verified ? '\uc778\uc99d\ub428' : status?.needsLogin ? '\ub85c\uadf8\uc778 \ud544\uc694' : '\ubbf8\uc778\uc99d'}`;
 }
 
 function findMenuButton(tab) {
@@ -229,7 +236,7 @@ function openPremiumTabByName(tab = pendingPremiumTab) {
   if (!button) return false;
 
   const message = document.querySelector('.heart-lock p');
-  if (message) message.textContent = '하트 인증이 확인됐어. 설정 화면을 여는 중이야.';
+  if (message) message.textContent = '\ud558\ud2b8 \uc778\uc99d\uc744 \ud655\uc778\ud588\uc5b4. \uc124\uc815 \ud654\uba74\uc744 \uc5ec\ub294 \uc911\uc774\uc57c.';
 
   bypassPremiumTabClick = true;
   button.click();

@@ -12,6 +12,7 @@ const app = express();
 
 for (const envFile of [
   '../primary-hosting-secrets.env',
+  '../natsumi-koreanbots-token.env',
   '../natsumi-dashboard-vortexa-secrets.env',
   '../natsumi-automation-secrets.env',
   '../yuzuha-vortexa-secrets.env',
@@ -347,7 +348,12 @@ function publicBaseUrl(req) {
 
 function requireLogin(req, res, next) {
   if (req.session?.discordUser?.id) return next();
-  return res.status(401).json({ error: 'Discord login required.' });
+  return res.status(401).json({
+    ok: false,
+    error: 'login_required',
+    message: '디스코드 로그인이 필요합니다.',
+    loginUrl: '/auth/discord/dashboard',
+  });
 }
 
 function isOwner(req) {
@@ -591,7 +597,13 @@ app.get('/api/heart-status', requireLogin, async (req, res) => {
   const botKey = requestedBotKey(req);
   const config = koreanBotsConfig(botKey);
   const verified = isOwner(req) || await checkKoreanBotsVote(req.session.discordUser.id, botKey);
-  res.json({ verified, heartUrl: config.heartUrl, botKey });
+  res.json({
+    ok: true,
+    verified,
+    heartUrl: config.heartUrl,
+    botKey,
+    configured: Boolean(config.botId && config.token),
+  });
 });
 app.get('/api/bot-status', async (req, res) => {
   const botKey = requestedBotKey(req);
