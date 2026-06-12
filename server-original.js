@@ -4,10 +4,26 @@ import session from 'express-session';
 import mongoose, { Schema, model } from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
+
+for (const envFile of [
+  '../primary-hosting-secrets.env',
+  '../natsumi-dashboard-vortexa-secrets.env',
+  '../natsumi-automation-secrets.env',
+  '../yuzuha-vortexa-secrets.env',
+]) {
+  const filePath = path.resolve(__dirname, envFile);
+  if (!fs.existsSync(filePath)) continue;
+  for (const line of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
+    const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    if (!match || process.env[match[1]]) continue;
+    process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '');
+  }
+}
 
 const PORT = Number(process.env.SERVER_PORT || process.env.PORT || process.env.WEB_PORT || 25901);
 const DASHBOARD_URL = (process.env.DASHBOARD_URL || 'http://natsumidashboard.kro.kr/').replace(/\/$/, '') + '/';
@@ -29,6 +45,102 @@ const BOT_PROFILES = {
   natsumi: { key: 'natsumi', name: 'Natsumi', botId: NATSUMI_BOT_ID, token: NATSUMI_BOT_TOKEN },
   yuzuha: { key: 'yuzuha', name: 'Yuzuha', botId: YUZUHA_BOT_ID, token: YUZUHA_BOT_TOKEN },
 };
+
+function firstEnv(...names) {
+  for (const name of names) {
+    const value = cleanEnv(process.env[name]);
+    if (value) return value;
+  }
+  return '';
+}
+
+function hostingConfig(botKey = 'natsumi') {
+  const key = normalizeBotKey(botKey);
+  const upper = key.toUpperCase();
+  const apiBase = firstEnv(`${upper}_PRIMARY_API_BASE`, 'PRIMARY_HOSTING_API_BASE', 'PRIMARY_HOSTING_PANEL_URL', 'VORTEXA_PANEL_URL', 'PANEL_URL').replace(/\/$/, '');
+  const apiKey = firstEnv(`${upper}_PRIMARY_API_KEY`, `${upper}_VORTEXA_API_KEY`, key === 'yuzuha' ? 'YUZUHA_PRIMARY_API_KEY' : 'NATSUMI_PRIMARY_API_KEY', 'PRIMARY_HOSTING_API_KEY', 'VORTEXA_API_KEY');
+  const serverId = firstEnv(`${upper}_PRIMARY_SERVER_ID`, `${upper}_VORTEXA_SERVER_ID`, `${upper}_SERVER_ID`, key === 'yuzuha' ? 'YUZUHA_SERVER_ID' : 'NATSUMI_SERVER_ID', 'PRIMARY_HOSTING_SERVER_ID', key === 'natsumi' ? 'VORTEXA_SERVER_ID' : '');
+  return { apiBase, apiKey, serverId };
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchRuntimeStatusCandidates(botKey = 'natsumi') {
+  const upper = normalizeBotKey(botKey).toUpperCase();
+  const urls = [
+    firstEnv(`${upper}_BOT_STATUS_URL`),
+    botKey === 'natsumi' ? firstEnv('NATSUMI_BOT_STATUS_URL') : firstEnv('YUZUHA_BOT_STATUS_URL'),
+    firstEnv('BOT_STATUS_URL', 'BOT_API_URL'),
+  ].filter(Boolean);
+  for (const base of urls) {
+    try {
+      const statusUrl = base.endsWith('/api/status') ? base : `${base.replace(/\/$/, '')}/api/status`;
+      const response = await fetchWithTimeout(statusUrl, {}, 4500);
+      if (!response.ok) continue;
+      const status = await response.json();
+      return { ok: true, status, source: statusUrl };
+    } catch {
+      continue;
+    }
+  }
+  return { ok: false, status: null, source: '' };
+}
+
+async function fetchHostingResources(botKey = 'natsumi') {
+  const config = hostingConfig(botKey);
+  if (!config.apiBase || !config.apiKey || !config.serverId) {
+    return { ok: false, configured: false, state: null, memoryMb: null };
+  }
+  try {
+    const response = await fetchWithTimeout(`${config.apiBase}/api/client/servers/${config.serverId}/resources`, {
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        Accept: 'application/json',
+      },
+    }, 6500);
+    if (!response.ok) return { ok: false, configured: true, state: null, status: response.status };
+    const json = await response.json();
+    const attrs = json?.attributes || {};
+    return {
+      ok: true,
+      configured: true,
+      state: attrs.current_state || null,
+      memoryMb: attrs.resources?.memory_bytes ? Math.round(attrs.resources.memory_bytes / 1024 / 1024) : null,
+    };
+  } catch (error) {
+    return { ok: false, configured: true, state: null, error: error?.name || 'fetch_failed' };
+  }
+}
+
+async function sendHostingPowerSignal(botKey = 'natsumi', signal = 'restart') {
+  const config = hostingConfig(botKey);
+  if (!config.apiBase || !config.apiKey || !config.serverId) {
+    return { ok: false, configured: false, error: 'hosting server id is not configured' };
+  }
+  const safeSignal = ['start', 'stop', 'restart', 'kill'].includes(signal) ? signal : 'restart';
+  try {
+    const response = await fetchWithTimeout(`${config.apiBase}/api/client/servers/${config.serverId}/power`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ signal: safeSignal }),
+    }, 6500);
+    return { ok: response.ok || response.status === 204, configured: true, status: response.status, signal: safeSignal };
+  } catch (error) {
+    return { ok: false, configured: true, error: error?.name || 'fetch_failed', signal: safeSignal };
+  }
+}
 
 function koreanBotsConfig(botKey = 'natsumi') {
   const key = normalizeBotKey(botKey);
@@ -486,14 +598,11 @@ app.get('/api/bot-status', async (req, res) => {
   const profile = BOT_PROFILES[botKey];
   let bot = null;
   let botReady = false;
-  let botApiOk = false;
-  let botRuntimeStatus = null;
-  let liveGuildCount = null;
   if (profile?.token) {
     try {
-      const botRes = await fetch('https://discord.com/api/v10/users/@me', {
+      const botRes = await fetchWithTimeout('https://discord.com/api/v10/users/@me', {
         headers: { Authorization: `Bot ${profile.token}` },
-      });
+      }, 4500);
       if (botRes.ok) {
         bot = await botRes.json();
         botReady = Boolean(bot?.id);
@@ -502,40 +611,43 @@ app.get('/api/bot-status', async (req, res) => {
       botReady = false;
     }
   }
-  if (BOT_STATUS_URL) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    try {
-      const statusUrl = BOT_STATUS_URL.endsWith('/api/status') ? BOT_STATUS_URL : `${BOT_STATUS_URL.replace(/\/$/, '')}/api/status`;
-      const statusRes = await fetch(statusUrl, { signal: controller.signal });
-      if (statusRes.ok) {
-        const status = await statusRes.json();
-        botApiOk = true;
-        botRuntimeStatus = status.status || null;
-        liveGuildCount = Number(status.guilds || 0) || null;
-      }
-    } catch {
-      botApiOk = false;
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
 
+  const [runtime, hosting] = await Promise.all([
+    fetchRuntimeStatusCandidates(botKey),
+    fetchHostingResources(botKey),
+  ]);
+  const status = runtime.status || {};
   const configuredGuildCount = Number(process.env.BOT_GUILD_COUNT || process.env.NATSUMI_GUILD_COUNT || 0);
+  const liveGuildCount = Number(status.guilds || status.botServers || 0) || null;
   const guildCount = liveGuildCount || (Number.isFinite(configuredGuildCount) && configuredGuildCount > 0 ? configuredGuildCount : null);
+
   res.json({
     apiOk: true,
     botKey,
     botId: bot?.id || profile?.botId || null,
     botReady,
     botName: bot?.username || profile?.name || 'BOT',
-    botApiOk,
-    botRuntimeStatus,
+    botApiOk: runtime.ok,
+    botRuntimeStatus: status.status || null,
+    botStatusSource: runtime.source || null,
+    hostingConfigured: hosting.configured,
+    hostingOk: hosting.ok,
+    hostingState: hosting.state,
+    hostingMemoryMb: hosting.memoryMb,
+    panelStatus: hosting.ok ? 'ok' : (hosting.configured ? 'retry_later' : 'not_configured'),
     guildCount,
     checkedAt: new Date().toISOString(),
   });
 });
 
+app.post('/api/bot-power', requireLogin, async (req, res) => {
+  if (!isOwner(req)) return res.status(403).json({ error: 'Only the developer can control bot power.' });
+  const botKey = requestedBotKey(req);
+  const signal = String(req.body?.signal || 'restart').toLowerCase();
+  const result = await sendHostingPowerSignal(botKey, signal);
+  if (!result.configured) return res.status(400).json({ ok: false, error: 'Hosting API is configured, but server id is missing.' });
+  res.status(result.ok ? 200 : 502).json({ ...result, botKey });
+});
 app.get('/api/dashboard/session', (req, res) => res.json({
   user: req.session?.discordUser || null,
   isOwner: isOwner(req),
