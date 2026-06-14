@@ -27,9 +27,25 @@ for (const envFile of [
 }
 
 const PORT = Number(process.env.SERVER_PORT || process.env.PORT || process.env.WEB_PORT || 25901);
-const DASHBOARD_URL = (process.env.DASHBOARD_URL || 'http://natsumidashboard.kro.kr/').replace(/\/$/, '') + '/';
+const HTTP_PUBLIC_HOSTS = new Set([
+  'natsumidashboard.kro.kr',
+  'natsumi-game.kro.kr',
+  'api.natsumidashboard.kro.kr',
+  'api.natsumi-game.kro.kr',
+]);
+function normalizePublicServiceUrl(value, fallback) {
+  const raw = String(value || fallback).trim();
+  try {
+    const url = new URL(raw);
+    if (HTTP_PUBLIC_HOSTS.has(url.hostname)) url.protocol = 'http:';
+    return url.toString();
+  } catch {
+    return fallback;
+  }
+}
+const DASHBOARD_URL = normalizePublicServiceUrl(process.env.DASHBOARD_URL, 'http://natsumidashboard.kro.kr/').replace(/\/$/, '') + '/';
 const SITE_URL = (process.env.SITE_URL || 'http://natsumi-site.kro.kr/').replace(/\/$/, '') + '/';
-const GAME_URL = (process.env.GAME_URL || 'http://natsumi-game.kro.kr/').replace(/\/$/, '') + '/';
+const GAME_URL = normalizePublicServiceUrl(process.env.GAME_URL, 'http://natsumi-game.kro.kr/').replace(/\/$/, '') + '/';
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 const NATSUMI_BOT_TOKEN = process.env.NATSUMI_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN || process.env.TOKEN || '';
@@ -432,9 +448,9 @@ app.use(session({
 }));
 
 function publicBaseUrl(req) {
-  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, '');
+  if (process.env.PUBLIC_BASE_URL) return normalizePublicServiceUrl(process.env.PUBLIC_BASE_URL, DASHBOARD_URL).replace(/\/$/, '');
   const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-  return `${proto}://${req.headers.host}`.replace(/\/$/, '');
+  return normalizePublicServiceUrl(`${proto}://${req.headers.host}`, DASHBOARD_URL).replace(/\/$/, '');
 }
 
 function requireLogin(req, res, next) {
