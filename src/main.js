@@ -272,6 +272,7 @@ function shell(content) {
           <span><img src="${NATSUMI_PROFILE_IMAGE}" alt="" /></span><b>${esc((currentBotProfile().name || 'YUZUHA').toUpperCase())}</b>
         </button>
         <div class="top-actions">
+          <a class="ghost-link" href="http://natsumi-game.kro.kr/" target="_blank" rel="noreferrer">Game Center</a>
           <label class="mode-toggle" title="Theme">
             <input type="checkbox" data-action="theme-toggle" ${state.theme === 'dark' ? 'checked' : ''}>
             <span></span>
@@ -322,7 +323,7 @@ function dashboard() {
   if (!state.canUseDashboard) return publicNoticePage();
   const guild = currentGuild();
   app.innerHTML = shell(`
-    <main class="dashboard-page">
+    <main class="dashboard-page ${state.menuOpen ? 'menu-is-open' : 'menu-is-closed'}">
       ${renderMenuDrawer()}
       <section class="main glass">
         <header class="main-head">
@@ -343,6 +344,10 @@ function renderMenuDrawer() {
   const guild = currentGuild();
   return `
     <aside class="sidebar glass">
+      <div class="sidebar-head">
+        <b>관리 메뉴</b>
+        <button class="ghost-btn compact" data-action="toggle-menu" type="button">닫기</button>
+      </div>
       <div class="profile-card">
         <div class="avatar big"><img src="${esc(avatarUrl())}" alt="" /></div>
         <div><b>${esc(state.profile?.globalName || state.profile?.username || 'yukiha_haruki')}</b><small>관리자 모드</small></div>
