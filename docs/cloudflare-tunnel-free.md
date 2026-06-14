@@ -16,6 +16,11 @@ Create a separate tunnel for the dashboard container.
 
 ```env
 DASHBOARD_CLOUDFLARED_TUNNEL_TOKEN=your_dashboard_tunnel_token
+USE_CLOUDFLARE_HTTPS=true
+PUBLIC_SERVICE_SCHEME=https
+DASHBOARD_URL=https://natsumidashboard.kro.kr/
+GAME_URL=https://natsumi-game.kro.kr/
+DISCORD_REDIRECT_URI=https://natsumidashboard.kro.kr/auth/discord/callback
 ```
 
 6. Add public hostnames to the same tunnel:
@@ -36,15 +41,15 @@ printed by the app logs.
 Use HTTPS URLs only:
 
 ```text
-http://natsumidashboard.kro.kr/auth/discord/callback
-http://natsumidashboard.kro.kr/auth/discord/dashboard/callback
+https://natsumidashboard.kro.kr/auth/discord/callback
+https://natsumidashboard.kro.kr/auth/discord/dashboard/callback
 ```
 
 ## Health check
 
 ```bash
-curl -I http://natsumidashboard.kro.kr
-curl -L http://natsumidashboard.kro.kr | head
+curl -I https://natsumidashboard.kro.kr
+curl -L https://natsumidashboard.kro.kr | head
 ```
 
 The response must be the dashboard HTML, not the Vortexa Cloud panel.
