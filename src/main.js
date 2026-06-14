@@ -272,7 +272,7 @@ function shell(content) {
           <span><img src="${NATSUMI_PROFILE_IMAGE}" alt="" /></span><b>${esc((currentBotProfile().name || 'YUZUHA').toUpperCase())}</b>
         </button>
         <div class="top-actions">
-          <a class="ghost-link" href="http://natsumi-game.kro.kr/" target="_blank" rel="noreferrer">Game Center</a>
+          <a class="ghost-link" href="https://haruki7777.github.io/NATSUMI-Game/" target="_blank" rel="noreferrer">Game Center</a>
           <label class="mode-toggle" title="Theme">
             <input type="checkbox" data-action="theme-toggle" ${state.theme === 'dark' ? 'checked' : ''}>
             <span></span>
