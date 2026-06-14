@@ -22,7 +22,7 @@ if ! command -v apt-get >/dev/null 2>&1; then
 fi
 
 apt-get update
-apt-get install -y nginx certbot python3-certbot-nginx
+apt-get install -y nginx
 
 cat > "/etc/nginx/sites-available/$DOMAIN" <<NGINX
 server {
@@ -52,13 +52,6 @@ nginx -t
 systemctl enable nginx
 systemctl reload nginx
 
-certbot --nginx \
-  --non-interactive \
-  --agree-tos \
-  --redirect \
-  --email "$EMAIL" \
-  -d "$DOMAIN"
-
 systemctl reload nginx
 
-echo "Done. Open: https://$DOMAIN"
+echo "Done. Open: http://$DOMAIN"
